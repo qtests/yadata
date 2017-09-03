@@ -2,7 +2,7 @@
 
 module Main where
 
-import Lib
+import LibYahoo
 
 -- import Other
 import Text.CSV
