@@ -18,8 +18,8 @@ main = do
    
    yd <- getYahooData "MU"
    let yd_csv = parseCSV "MU" (DBLU.toString yd)
-   let dates = either (\_ -> Left "Problem Reading File") (\x -> applyToColumnInCSV id x "Date") yd_csv 
-   let closep = either (\_ -> Left "Problem Reading File") (\x -> applyToColumnInCSV id x "Adj Close" ) yd_csv  
+   let dates = either (\_ -> Left "Network problem!") (\x -> applyToColumnInCSV id x "Date") yd_csv 
+   let closep = either (\_ -> Left "Network problem!") (\x -> applyToColumnInCSV id x "Adj Close" ) yd_csv  
    
    print $ zip <$> (map (read2UTCTime "%Y-%m-%d") <$> dates) <*> (map read2Double <$> closep)
 
