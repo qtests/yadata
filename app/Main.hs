@@ -3,6 +3,7 @@
 module Main where
 
 import LibYahoo
+import LibCSV
 
 -- import Other
 import Text.CSV
@@ -16,6 +17,10 @@ main :: IO ()
 main = do
    
    yd <- getYahooData "MU"
-   print $ parseCSV "MU" (DBLU.toString yd)
+   let yd_csv = parseCSV "MU" (DBLU.toString yd)
+   let dates = either (\error -> Left "Problem Reading File") (\x -> applyToColumnInCSV id x "Date") yd_csv 
+   let closep = either (\error -> Left "Problem Reading File") (\x -> applyToColumnInCSV id x "Adj Close" ) yd_csv  
+   
+   print $ zip <$> dates <*> closep
 
    print "__End__"

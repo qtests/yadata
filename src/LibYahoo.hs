@@ -30,9 +30,9 @@ crumblePattern = "CrumbStore\":{\"crumb\":\"(.*?)\"}" :: String
 getCrumble :: DBL.ByteString -> DBL.ByteString
 getCrumble crumbText = do
    let test = crumbText =~ crumblePattern :: (Int, Int)
-   let shift = 22 :: Int64
-   let crumb = DBL.take (fromIntegral (snd test) - (shift + 2) ) (DBL.drop (fromIntegral (fst test) + shift) crumbText)
-   crumb
+   -- let shift = 22 :: Int64
+   -- let crumb = DBL.take (fromIntegral (snd test) - (shift + 2) ) (DBL.drop (fromIntegral (fst test) + shift) crumbText)
+   DBL.take (fromIntegral (snd test) - 24) (DBL.drop (fromIntegral (fst test) + 22) crumbText)
 
 
 getYahooData :: String -> IO DBL.ByteString
