@@ -3,13 +3,28 @@
 module LibCSV
     ( someFun
     , applyToColumnInCSV
+    , read2Double
+    , read2UTCTime
     ) where
 
 import Text.CSV
 import Data.List
+import Data.Time
 
 someFun :: IO ()
 someFun = print "Hello World!"
+
+{-|
+   Converts a number in String to Double
+-}
+read2Double :: String -> Double
+read2Double x = read x :: Double
+
+{-|
+   Converts a date in String to UTCTime
+-}
+read2UTCTime :: String -> String -> UTCTime
+read2UTCTime format x = parseTimeOrError True defaultTimeLocale format x :: UTCTime
 
 
 {-|
