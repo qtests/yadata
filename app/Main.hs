@@ -5,22 +5,42 @@ module Main where
 import LibYahoo
 import LibCSV
 
--- import Other
+-- import CSV related functions
 import Text.CSV
 import qualified Data.ByteString.Lazy.UTF8 as DBLU
 
+-- import other
+import Data.Time
+import Data.Either
+import Control.Arrow (first)
+
+-- import graphiccs
+import Graphics.Rendering.Chart.Easy
+import Graphics.Rendering.Chart.Backend.Diagrams
+
+-- import system process
+import System.Process
 
 -- http://hackage.haskell.org/package/wreq-0.5.1.0/docs/Network-Wreq-Session.html
 -- https://stackoverflow.com/questions/44044263/yahoo-finance-historical-data-downloader-url-is-not-working
+
+prices :: Num b => Either String [(UTCTime, b)] -> [(LocalTime, b)]
+prices x = map (first (utcToLocalTime utc)) (concat $ rights [x])
 
 main :: IO ()
 main = do
    
    yd <- getYahooData "MU"
    let yd_csv = parseCSV "MU" (DBLU.toString yd)
-   let dates = either (\_ -> Left "Network problem!") (\x -> applyToColumnInCSV id x "Date") yd_csv 
-   let closep = either (\_ -> Left "Network problem!") (\x -> applyToColumnInCSV id x "Adj Close" ) yd_csv  
+   let dates = getColumnInCSV yd_csv "Date"
+   let closep = getColumnInCSV yd_csv "Adj Close"  
    
-   print $ zip <$> (map (read2UTCTime "%Y-%m-%d") <$> dates) <*> (map read2Double <$> closep)
+   let ts = zip <$> (map (read2UTCTime "%Y-%m-%d") <$> dates) <*> (map read2Double <$> closep)
+
+   -- Plot
+   let plotFileName = "plot-series.svg"
+   toFile def plotFileName $ plot (line "" [prices ts])
+   putStrLn $ "Plot saved to: " ++ plotFileName
+   createProcess (shell $ "firefox " ++ plotFileName)
 
    print "__End__"

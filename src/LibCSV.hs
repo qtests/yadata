@@ -1,18 +1,15 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module LibCSV
-    ( someFun
-    , applyToColumnInCSV
-    , read2Double
+    ( read2Double
     , read2UTCTime
+    , getColumnInCSV
     ) where
 
 import Text.CSV
 import Data.List
 import Data.Time
 
-someFun :: IO ()
-someFun = print "Hello World!"
 
 {-|
    Converts a number in String to Double
@@ -48,11 +45,20 @@ applyToColumnInCSV func csv column =
    Returns (Left errorMessage) or (Right index)
 -}
 getColumnIndexInCSV :: CSV -> String -> Either String Integer
-getColumnIndexInCSV csv column =
+getColumnIndexInCSV csv columnName =
     case lookupResponse of
-          Nothing -> Left "The column does not exist in this CSV file."
+          Nothing -> Left "The column does not exist in this CSV!"
           Just x -> Right (fromIntegral x)
     where
       -- This line does the lookup to see if column is in our CSV
-      lookupResponse = findIndex (== column) (head csv)
+      lookupResponse = findIndex (== columnName) (head csv)
 
+
+
+getColumnInCSV ::  Either a CSV -> String -> Either String [String]
+getColumnInCSV csv columnName = 
+    either 
+       (\r -> Left "Error reading CSV!" ) 
+       (\x -> applyToColumnInCSV id x columnName) csv
+
+    

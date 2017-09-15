@@ -41,6 +41,9 @@ executable yadata-exe
                      , utf8-string
                      , csv
                      , time
+                     , Chart
+                     , Chart-diagrams
+                     , process
   default-language:    Haskell2010
 
 test-suite yadata-test

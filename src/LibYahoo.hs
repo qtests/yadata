@@ -20,7 +20,7 @@ crumbleLink ticker = "https://finance.yahoo.com/quote/" ++ ticker ++ "/history?p
 yahooDataLink :: String -> String -> String
 yahooDataLink ticker crumb = 
    "https://query1.finance.yahoo.com/v7/finance/download/" ++ ticker ++ 
-   "?period1=1501686274&period2=1504364674&interval=1d&events=history&crumb=" ++ crumb 
+   "?period1=1201686274&period2=1504364674&interval=1d&events=history&crumb=" ++ crumb 
  
 
 crumblePattern :: String 
