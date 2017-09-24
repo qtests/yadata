@@ -58,5 +58,5 @@ getYahooDataSafe :: String -> IO DBL.ByteString
 getYahooDataSafe ticker = do
    dataDownload <- E.try $ (getYahooData ticker) :: IO (Either E.SomeException DBLU.ByteString)
    case dataDownload of
-        Left  e        -> return $ DBLU.fromString []
+        Left  e        -> return $ DBLU.fromString $ show e  -- DBLU.fromString []
         Right response -> return response

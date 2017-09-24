@@ -32,9 +32,9 @@ prices x = map (first (utcToLocalTime utc)) (concat $ rights [x])
 main :: IO ()
 main = do
    
-   yd <- getYahooDataSafe "MU"
+   yd <- getYahooDataSafe "IBM"
 
-   let yd_csv = parseCSV "MU" (DBLU.toString yd)
+   let yd_csv = parseCSV "IBM" (DBLU.toString yd)
    let dates = getColumnInCSV yd_csv "Date"
    let closep = getColumnInCSV yd_csv "Adj Close"  
    
