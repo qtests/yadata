@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module LibYahoo
-    ( getYahooData
+    (   getYahooData
+      , getYahooDataSafe
     ) where
 
 import Network.Wreq
@@ -12,6 +13,8 @@ import qualified Data.ByteString.Lazy as DBL
 import qualified Data.ByteString.Lazy.UTF8 as DBLU
 import qualified Network.Wreq.Session as S
 
+-- Exception handling
+import Control.Exception as E
 
 crumbleLink :: String -> String
 crumbleLink ticker = "https://finance.yahoo.com/quote/" ++ ticker ++ "/history?p=" ++ ticker
@@ -40,6 +43,7 @@ getYahooData ticker = S.withSession $ \sess -> do
 
    -- get session related data	
    r <- S.get sess (crumbleLink "KO")
+
    let rb = r ^. responseBody
    let crb = getCrumble rb
 
@@ -47,3 +51,12 @@ getYahooData ticker = S.withSession $ \sess -> do
    r2 <- S.get sess (yahooDataLink ticker (DBLU.toString crb) )
    let r2b = r2 ^. responseBody
    return r2b
+
+-- https://stackoverflow.com/questions/5631116/arising-from-a-use-of-control-exception-catch
+
+getYahooDataSafe :: String -> IO DBL.ByteString
+getYahooDataSafe ticker = do
+   dataDownload <- E.try $ (getYahooData ticker) :: IO (Either E.SomeException DBLU.ByteString)
+   case dataDownload of
+        Left  e        -> return $ DBLU.fromString []
+        Right response -> return response

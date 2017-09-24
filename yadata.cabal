@@ -25,6 +25,7 @@ library
                      , utf8-string
                      , csv
                      , time
+
                      
   default-language:    Haskell2010
 

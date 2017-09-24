@@ -23,14 +23,17 @@ import System.Process
 
 -- http://hackage.haskell.org/package/wreq-0.5.1.0/docs/Network-Wreq-Session.html
 -- https://stackoverflow.com/questions/44044263/yahoo-finance-historical-data-downloader-url-is-not-working
+-- https://stackoverflow.com/questions/1317399/getting-the-local-appdata-folder-in-haskell
 
 prices :: Num b => Either String [(UTCTime, b)] -> [(LocalTime, b)]
 prices x = map (first (utcToLocalTime utc)) (concat $ rights [x])
 
+
 main :: IO ()
 main = do
    
-   yd <- getYahooData "MU"
+   yd <- getYahooDataSafe "MU"
+
    let yd_csv = parseCSV "MU" (DBLU.toString yd)
    let dates = getColumnInCSV yd_csv "Date"
    let closep = getColumnInCSV yd_csv "Adj Close"  
@@ -42,5 +45,5 @@ main = do
    toFile def plotFileName $ plot (line "" [prices ts])
    putStrLn $ "Plot saved to: " ++ plotFileName
    createProcess (shell $ "firefox " ++ plotFileName)
-
+  
    print "__End__"
