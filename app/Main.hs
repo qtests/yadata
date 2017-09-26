@@ -30,14 +30,15 @@ prices x = map (first (utcToLocalTime utc)) (concat $ rights [x])
 
 
 main :: IO ()
-main = do
-   
+main =
+    do
+
    yd <- getYahooDataSafe "IBM"
 
    let yd_csv = parseCSV "IBM" (DBLU.toString yd)
    let dates = getColumnInCSV yd_csv "Date"
-   let closep = getColumnInCSV yd_csv "Adj Close"  
-   
+   let closep = getColumnInCSV yd_csv "Adj Close"
+
    let ts = zip <$> (map (read2UTCTime "%Y-%m-%d") <$> dates) <*> (map read2Double <$> closep)
 
    -- Plot
@@ -45,5 +46,5 @@ main = do
    toFile def plotFileName $ plot (line "" [prices ts])
    putStrLn $ "Plot saved to: " ++ plotFileName
    createProcess (shell $ "firefox " ++ plotFileName)
-  
+
    print "__End__"
