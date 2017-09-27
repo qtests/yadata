@@ -22,15 +22,6 @@ import Data.Time
 import Control.Exception as E
 
 
-data YahooData = YahooData
-  { yahooDataDate :: L8.ByteString
-  , yahooDataOpen :: L8.ByteString
-  , yahooDataHigh :: L8.ByteString
-  , yahooDataLow :: L8.ByteString
-  , yahooDataClose :: L8.ByteString
-  , yahooDataAdjClose :: L8.ByteString
-  , yahooDataVolume :: L8.ByteString
-  } deriving (Show, Eq)
 
 
 crumbleLink :: String -> String
@@ -77,47 +68,3 @@ getYahooDataSafe ticker = do
    case dataDownload of
         Left  e        -> return $ DBLU.fromString $ show e  -- DBLU.fromString []
         Right response -> return response
-
-
-
-------------------------------------------------------------------------------------------------------
-
-getYahooResponse :: String -> IO (Maybe (Response L8.ByteString))
-getYahooResponse ticker = do
-  cookieRequest <- NS.parseRequest $ crumbleLink ticker
-  eresponse <- try $ NS.httpLBS cookieRequest :: IO (Either HttpException (Response L8.ByteString))
-  case eresponse of
-    Left e -> return Nothing
-    Right response -> return $ Just response
-
-getYList :: Maybe (Response L8.ByteString) -> [L8.ByteString]
-getYList response = do
-    case response of
-      Nothing -> []
-      Just a ->  L8.lines $ getResponseBody a
-
-convertToDoubleList :: [L8.ByteString] -> [[L8.ByteString]]
-convertToDoubleList blist = map (L8.split ',') blist
-
-getYDataList :: [[L8.ByteString]] -> [YahooData]
-getYDataList dl = map createRecData dl
-
-parseBStrTime :: L8.ByteString -> Maybe UTCTime
-parseBStrTime a = undefined
-
-createRecData :: [L8.ByteString] -> YahooData
-createRecData l =
- YahooData
-  { yahooDataDate = l !! 0
-  , yahooDataOpen = l !! 1
-  , yahooDataHigh = l !! 2
-  , yahooDataLow  = l !! 3
-  , yahooDataClose = l !! 4
-  , yahooDataAdjClose = l !! 5
-  , yahooDataVolume = l !!  6
-  }
-
-getYHistorical :: String -> IO [YahooData]
-getYHistorical ticker = do
-    a <- getYahooResponse ticker
-    return $ getYDataList . convertToDoubleList . getYList $ a

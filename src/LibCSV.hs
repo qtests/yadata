@@ -9,7 +9,11 @@ module LibCSV
 import Text.CSV
 import Data.List
 import Data.Time
-
+import qualified Data.CSV.Conduit as C hiding (CSV)
+import Data.CSV.Conduit.Conversion
+import Data.Text (Text)
+import LibYahoo (getYahooData)
+import Control.Monad (mzero)
 
 {-|
    Converts a number in String to Double
@@ -56,9 +60,40 @@ getColumnIndexInCSV csv columnName =
 
 
 getColumnInCSV ::  Either a CSV -> String -> Either String [String]
-getColumnInCSV csv columnName = 
-    either 
-       (\r -> Left "Error reading CSV!" ) 
+getColumnInCSV csv columnName =
+    either
+       (\r -> Left "Error reading CSV!" )
        (\x -> applyToColumnInCSV id x columnName) csv
 
-    
+
+------------------------------------------------------------------------------------------------------
+
+data YahooData = YahooData
+  { yahooDataDate :: !Text
+  , yahooDataOpen :: !Text
+  , yahooDataHigh :: !Text
+  , yahooDataLow :: !Text
+  , yahooDataClose :: !Text
+  , yahooDataAdjClose :: !Text
+  , yahooDataVolume :: !Text
+  } deriving (Show, Eq)
+
+instance FromRecord YahooData where
+    parseRecord v
+        | length v == 7 = YahooData <$>
+                          v .! 0 <*>
+                          v .! 1 <*>
+                          v .! 2 <*>
+                          v .! 3 <*>
+                          v .! 4 <*>
+                          v .! 4 <*>
+                          v .! 6
+        | otherwise     = mzero
+
+instance ToRecord YahooData where
+    toRecord (YahooData yahooDataDate yahooDataOpen  yahooDataHigh  yahooDataLow  yahooDataClose  yahooDataAdjClose yahooDataVolume) = record [
+        toField yahooDataDate, toField yahooDataOpen, toField  yahooDataHigh, toField  yahooDataLow, toField  yahooDataClose, toField  yahooDataAdjClose, toField yahooDataVolume]
+
+readToType = do
+   yd <- getYahooData
+   return undefined
