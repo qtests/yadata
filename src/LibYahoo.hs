@@ -5,13 +5,14 @@ module LibYahoo
       , getYahooDataSafe
     ) where
 
+
 import Network.Wreq
 import Text.Regex.PCRE
 import Control.Lens
 import Data.Int
-import qualified Data.ByteString.Lazy as DBL
-import qualified Data.ByteString.Lazy.UTF8 as DBLU
+import qualified Data.ByteString.Lazy as B (ByteString, drop, take, pack)
 import qualified Network.Wreq.Session as S
+import qualified Data.ByteString.Lazy.Char8 as C
 
 -- Exception handling
 import Control.Exception as E
@@ -21,42 +22,40 @@ crumbleLink ticker = "https://finance.yahoo.com/quote/" ++ ticker ++ "/history?p
 
 
 yahooDataLink :: String -> String -> String
-yahooDataLink ticker crumb = 
-   "https://query1.finance.yahoo.com/v7/finance/download/" ++ ticker ++ 
-   "?period1=1201686274&period2=1504364674&interval=1d&events=history&crumb=" ++ crumb 
- 
+yahooDataLink ticker crumb =
+   "https://query1.finance.yahoo.com/v7/finance/download/" ++ ticker ++
+   "?period1=1201686274&period2=1504364674&interval=1d&events=history&crumb=" ++ crumb
 
-crumblePattern :: String 
+
+crumblePattern :: String
 crumblePattern = "CrumbStore\":{\"crumb\":\"(.*?)\"}" :: String
 
 
-getCrumble :: DBL.ByteString -> DBL.ByteString
+getCrumble :: B.ByteString -> B.ByteString
 getCrumble crumbText = do
    let test = crumbText =~ crumblePattern :: (Int, Int)
    -- let shift = 22 :: Int64
    -- let crumb = DBL.take (fromIntegral (snd test) - (shift + 2) ) (DBL.drop (fromIntegral (fst test) + shift) crumbText)
-   DBL.take (fromIntegral (snd test) - 24) (DBL.drop (fromIntegral (fst test) + 22) crumbText)
+   B.take (fromIntegral (snd test) - 24) (B.drop (fromIntegral (fst test) + 22) crumbText)
 
 
-getYahooData :: String -> IO DBL.ByteString
+getYahooData :: String -> IO B.ByteString
 getYahooData ticker = S.withSession $ \sess -> do
-
-   -- get session related data	
+   -- get session related data
    r <- S.get sess (crumbleLink "KO")
-
    let rb = r ^. responseBody
    let crb = getCrumble rb
-
    -- get time series
-   r2 <- S.get sess (yahooDataLink ticker (DBLU.toString crb) )
+   r2 <- S.get sess (yahooDataLink ticker (C.unpack crb))
    let r2b = r2 ^. responseBody
    return r2b
 
 -- https://stackoverflow.com/questions/5631116/arising-from-a-use-of-control-exception-catch
 
-getYahooDataSafe :: String -> IO DBL.ByteString
+
+getYahooDataSafe :: String -> IO B.ByteString
 getYahooDataSafe ticker = do
-   dataDownload <- E.try $ (getYahooData ticker) :: IO (Either E.SomeException DBLU.ByteString)
+   dataDownload <- E.try $ (getYahooData ticker) :: IO (Either E.SomeException B.ByteString)
    case dataDownload of
-        Left  e        -> return $ DBLU.fromString $ show e  -- DBLU.fromString []
+        Left  e        -> return $ C.pack (show e)
         Right response -> return response
