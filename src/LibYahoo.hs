@@ -53,9 +53,10 @@ getYahooData ticker = S.withSession $ \sess -> do
 -- https://stackoverflow.com/questions/5631116/arising-from-a-use-of-control-exception-catch
 
 
-getYahooDataSafe :: String -> IO B.ByteString
+getYahooDataSafe :: String -> IO (Either E.SomeException B.ByteString)
 getYahooDataSafe ticker = do
-   dataDownload <- E.try $ (getYahooData ticker) :: IO (Either E.SomeException B.ByteString)
-   case dataDownload of
-        Left  e        -> return $ C.pack (show e)
-        Right response -> return response
+   dataDownload <- E.try $ (getYahooData ticker)
+   return dataDownload
+   -- case dataDownload of
+   --      Left  e        -> return $ C.pack (show e)
+   --      Right response -> return response
