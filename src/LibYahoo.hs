@@ -13,9 +13,9 @@ import Data.Int
 import qualified Data.ByteString.Lazy as B (ByteString, drop, take, pack)
 import qualified Network.Wreq.Session as S
 import qualified Data.ByteString.Lazy.Char8 as C
-
 -- Exception handling
 import Control.Exception as E
+import Data.Typeable
 
 crumbleLink :: String -> String
 crumbleLink ticker = "https://finance.yahoo.com/quote/" ++ ticker ++ "/history?p=" ++ ticker
@@ -51,12 +51,11 @@ getYahooData ticker = S.withSession $ \sess -> do
    return r2b
 
 -- https://stackoverflow.com/questions/5631116/arising-from-a-use-of-control-exception-catch
+data YahooException = StatusCodeException deriving (Show, Typeable)
 
+instance Exception YahooException
 
-getYahooDataSafe :: String -> IO (Either E.SomeException B.ByteString)
+getYahooDataSafe :: String -> IO (Either YahooException B.ByteString)
 getYahooDataSafe ticker = do
    dataDownload <- E.try $ (getYahooData ticker)
    return dataDownload
-   -- case dataDownload of
-   --      Left  e        -> return $ C.pack (show e)
-   --      Right response -> return response
