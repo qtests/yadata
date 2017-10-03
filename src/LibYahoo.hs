@@ -52,7 +52,10 @@ getYahooData ticker = S.withSession $ \sess -> do
    return r2b
 
 -- https://stackoverflow.com/questions/5631116/arising-from-a-use-of-control-exception-catch
-data YahooException = YStatusCodeException deriving (Show, Typeable)
+data YahooException = YStatusCodeException deriving Typeable
+
+instance Show YahooException where
+    show YStatusCodeException = "Yadata http exception!"
 
 instance Exception YahooException
 
