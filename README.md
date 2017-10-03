@@ -1,3 +1,3 @@
 # yadata
 
-Testing yahoo data download in Haskell
+Fetch Yahoo historical data
