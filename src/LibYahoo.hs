@@ -3,6 +3,7 @@
 module LibYahoo
     (   getYahooData
       , getYahooDataSafe
+      , YahooException (..)
     ) where
 
 
