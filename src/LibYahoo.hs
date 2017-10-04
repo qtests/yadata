@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE BangPatterns #-}
 
 module LibYahoo
     (   getYahooData
@@ -51,15 +52,44 @@ getYahooData ticker = S.withSession $ \sess -> do
    let r2b = r2 ^. responseBody
    return r2b
 
--- https://stackoverflow.com/questions/5631116/arising-from-a-use-of-control-exception-catch
-data YahooException = YStatusCodeException deriving Typeable
+------------------------------------------------------------------------------------------------------
+
+data YahooException = YStatusCodeException | YCookieCrumbleException deriving Typeable
 
 instance Show YahooException where
-    show YStatusCodeException = "Yadata http exception!"
+    show YStatusCodeException = "Yadata data fetch exception!"
+    show YCookieCrumbleException = "Yadata cookie crumble exception!"
 
 instance Exception YahooException
 
-getYahooDataSafe :: String -> IO (Either YahooException B.ByteString)
+getCrumbleSafe :: IO (Either YahooException C.ByteString)
+getCrumbleSafe =  do
+   !d <- (E.try $ get (crumbleLink "KO")) :: IO (Either YahooException (Response C.ByteString))
+   case d of
+       Left e -> throw YCookieCrumbleException
+       Right crb -> do
+         let status = crb ^. responseStatus . statusCode
+         let body = crb ^. responseBody
+         if status /= 200 then
+            return $ Left YCookieCrumbleException
+         else
+            return $ Right $ getCrumble body
+
+
+getYahooDataSafe :: String -> IO (Either YahooException C.ByteString)
 getYahooDataSafe ticker = do
-   dataDownload <- E.try $ (getYahooData ticker)
-   return dataDownload
+   crumb <- getCrumbleSafe :: IO (Either YahooException  C.ByteString)
+   case crumb of
+       Left e -> throw YCookieCrumbleException
+       Right crb -> do
+         !result <- (E.try $ get (yahooDataLink ticker (C.unpack crb))) :: IO (Either YahooException (Response C.ByteString))
+         case result of
+           Left e -> throw YStatusCodeException
+           Right d -> do
+             let status = d ^. responseStatus . statusCode
+             print status
+             let body = d ^. responseBody
+             if status /= 200 then
+               return $ throw YStatusCodeException
+             else
+               return $ Right body
