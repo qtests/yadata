@@ -1,18 +1,27 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE RankNTypes #-}
 
 module LibYahoo
   ( getYahooDataSafe
   , YahooException(..)
   ) where
 
+import Control.Applicative ((<|>))
 import Control.Exception as E
 import Control.Lens
+import Control.Lens
 import Control.Monad.Except
+import Data.Aeson
+import Data.Aeson.Lens
+import Data.ByteString
 import qualified Data.ByteString.Lazy as B
        (ByteString, drop, pack, take)
 import qualified Data.ByteString.Lazy.Char8 as C
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as HM
 import Data.Int
+import Data.Maybe (fromMaybe)
+import Data.Text as T
 import Data.Time.Clock
 import Data.Typeable
 import Network.HTTP.Client
@@ -62,11 +71,13 @@ getYahooData ticker =
 data YahooException
   = YStatusCodeException
   | YCookieCrumbleException
+  | YWrongTickerException
   deriving (Typeable)
 
 instance Show YahooException where
-  show YStatusCodeException = "Yadata data fetch exception!"
-  show YCookieCrumbleException = "Yadata cookie crumble exception!"
+  show YStatusCodeException = "Yadata :: data fetch exception!"
+  show YCookieCrumbleException = "Yadata :: cookie crumble exception!"
+  show YWrongTickerException = "Yadata :: wrong ticker passed in!"
 
 instance Exception YahooException
 
@@ -92,4 +103,14 @@ getYahooDataSafe ticker = do
         Left e -> return $ show YStatusCodeException
         Right d -> do
           let body2 = d ^. W.responseBody
-          return $ C.unpack body2
+          -- chartError <- getChartKey body2
+          -- financeError <- getFinanceKey body2
+          -- let cE = HM.lookup "chart" chartError
+          -- let fE = HM.lookup "finance" financeError
+          return "x" -- $ fromMaybe (C.unpack body2) $ fE <|> cE
+
+getChartKey :: C.ByteString -> Maybe (HashMap Text Value)
+getChartKey bs = bs ^? key "chart" . _Object
+
+getFinanceKey :: C.ByteString -> Maybe (HashMap Text Value)
+getFinanceKey bs =  bs ^? key "finance" . _Object
