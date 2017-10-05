@@ -18,6 +18,7 @@ import qualified Data.ByteString.Lazy.Char8 as C
 import Control.Exception as E
 import Control.Monad.Except
 import Data.Typeable
+import Network.HTTP.Simple
 
 crumbleLink :: String -> String
 crumbleLink ticker = "https://finance.yahoo.com/quote/" ++ ticker ++ "/history?p=" ++ ticker
@@ -83,20 +84,17 @@ fetchCompanyData ticker =
           else return $ Right r2b
 
 getCrumbleSafe :: IO (Either YahooException C.ByteString)
-getCrumbleSafe =
-  S.withSession $ \sess -> do
-    d <-
-      E.try
-        (let !x = S.get sess (crumbleLink "KO")
-         in x) :: IO (Either YahooException (Response C.ByteString))
-    case d of
-      Left e -> return $ Left YCookieCrumbleException
-      Right crb -> do
-        let status = crb ^. responseStatus . statusCode
-        let body = crb ^. responseBody
-        if status /= 200
-          then return $ Left YCookieCrumbleException
-          else return $ Right $ getCrumble body
+getCrumbleSafe = do
+  request <- parseRequest (crumbleLink "KO")
+  d <-
+    E.try
+      (httpLBS request) :: IO (Either YahooException (Response C.ByteString))
+  case d of
+    Left e -> return $ Left YCookieCrumbleException
+    Right crb -> do
+      let status = crb ^. responseStatus . statusCode
+      let body = crb ^. responseBody
+      return $ Right $ getCrumble body
 
 
 getYahooDataSafe :: String -> IO String
@@ -104,28 +102,22 @@ getYahooDataSafe ticker = do
   crumb <- getCrumbleSafe :: IO (Either YahooException C.ByteString)
   case crumb of
     Left e -> return $ show YCookieCrumbleException
-    Right crb ->
-      S.withSession $ \sess -> do
-        result <-
-          E.try
-            (let !x = S.get sess (yahooDataLink ticker (C.unpack crb))
-             in x) :: IO (Either YahooException (Response C.ByteString))
-        case result of
-          Left e -> return $ show YStatusCodeException
-          Right d -> do
-            let status = d ^. responseStatus . statusCode
-            let body = d ^. responseBody
-            if status /= 200
-              then return $ show YStatusCodeException
-              else return $ C.unpack body
-
-
+    Right crb -> do
+      request <- parseRequest (yahooDataLink ticker (C.unpack crb))
+      result <-
+        E.try
+          (httpLBS request) :: IO (Either YahooException (Response C.ByteString))
+      case result of
+        Left e -> return $ show YStatusCodeException
+        Right d -> do
+          let status = d ^. responseStatus . statusCode
+          let body = d ^. responseBody
+          return $ C.unpack body
 
 
 handler :: YahooException -> IO ()
 handler YStatusCodeException = putStrLn "status code exception"
 handler YCookieCrumbleException = putStrLn "cookie crumble exception"
-
 
 testIt = tryIt `catch` handler
 
