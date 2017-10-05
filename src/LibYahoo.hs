@@ -13,11 +13,13 @@ import qualified Data.ByteString.Lazy as B
        (ByteString, drop, pack, take)
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Int
+import Data.Time.Clock
 import Data.Typeable
 import Network.HTTP.Client
-import Network.HTTP.Simple hiding (httpLbs)
 import Network.HTTP.Client.TLS
-import qualified Network.Wreq as W  (responseBody, responseStatus, statusCode)
+import Network.HTTP.Simple hiding (httpLbs)
+import qualified Network.Wreq as W
+       (responseBody, responseStatus, statusCode)
 import qualified Network.Wreq.Session as S
 import Text.Regex.PCRE
 
@@ -106,10 +108,15 @@ getYahooDataSafe ticker = do
   case crumb of
     Left e -> return $ show YCookieCrumbleException
     Right crb -> do
+      now <- getCurrentTime
+      let (jar1, _) = updateCookieJar crb request now (createCookieJar [])
+      putStrLn $ "new jar: " ++ show jar1
       let body = crb ^. W.responseBody
       request2 <- parseRequest (yahooDataLink ticker (C.unpack $ getCrumble body))
+      now2 <- getCurrentTime
+      let (req2, jar2) = insertCookiesIntoRequest request2 jar1 now2
       result <-
-        E.try (httpLbs request2 manager) :: IO (Either YahooException (Response C.ByteString))
+        E.try (httpLbs req2 manager) :: IO (Either YahooException (Response C.ByteString))
       case result of
         Left e -> return $ show YStatusCodeException
         Right d -> do
