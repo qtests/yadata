@@ -70,67 +70,26 @@ instance Show YahooException where
 
 instance Exception YahooException
 
-fetchCompanyData :: String -> IO (Either YahooException B.ByteString)
-fetchCompanyData ticker =
-  S.withSession $ \sess -> do
-    r <- S.get sess (crumbleLink "KO")
-    let rs = r ^. W.responseStatus . W.statusCode
-    let rb = r ^. W.responseBody
-    if rs /= 200
-      then return $ Left YCookieCrumbleException
-      else do
-        let crb = getCrumble rb
-        r2 <- S.get sess (yahooDataLink ticker (C.unpack crb))
-        let r2s = r2 ^. W.responseStatus . W.statusCode
-        let r2b = r2 ^. W.responseBody
-        if r2s /= 200
-          then return $ Left YStatusCodeException
-          else return $ Right r2b
-
-getCrumbleSafe :: IO (Either YahooException C.ByteString)
-getCrumbleSafe = do
-  request <- parseRequest (crumbleLink "KO")
-  d <-
-    E.try (httpLBS request) :: IO (Either YahooException (Response C.ByteString))
-  case d of
-    Left e -> return $ Left YCookieCrumbleException
-    Right crb -> do
-      let body = crb ^. W.responseBody
-      return $ Right $ getCrumble body
-
 getYahooDataSafe :: String -> IO String
 getYahooDataSafe ticker = do
   manager <- newManager $ managerSetProxy noProxy tlsManagerSettings
   setGlobalManager manager
-  request <- parseRequest (crumbleLink "KO")
+  cookieRequest <- parseRequest (crumbleLink "KO")
   crumb <-
-    E.try (httpLbs request manager) :: IO (Either YahooException (Response C.ByteString))
+    E.try (httpLbs cookieRequest manager) :: IO (Either YahooException (Response C.ByteString))
   case crumb of
     Left e -> return $ show YCookieCrumbleException
     Right crb -> do
       now <- getCurrentTime
-      let (jar1, _) = updateCookieJar crb request now (createCookieJar [])
-      putStrLn $ "new jar: " ++ show jar1
+      let (jar1, _) = updateCookieJar crb cookieRequest now (createCookieJar [])
       let body = crb ^. W.responseBody
-      request2 <- parseRequest (yahooDataLink ticker (C.unpack $ getCrumble body))
+      dataRequest <- parseRequest (yahooDataLink ticker (C.unpack $ getCrumble body))
       now2 <- getCurrentTime
-      let (req2, jar2) = insertCookiesIntoRequest request2 jar1 now2
+      let (dataReq, jar2) = insertCookiesIntoRequest dataRequest jar1 now2
       result <-
-        E.try (httpLbs req2 manager) :: IO (Either YahooException (Response C.ByteString))
+        E.try (httpLbs dataReq manager) :: IO (Either YahooException (Response C.ByteString))
       case result of
         Left e -> return $ show YStatusCodeException
         Right d -> do
           let body2 = d ^. W.responseBody
           return $ C.unpack body2
-
-handler :: YahooException -> IO ()
-handler YStatusCodeException = putStrLn "status code exception"
-handler YCookieCrumbleException = putStrLn "cookie crumble exception"
-
-testIt = tryIt `catch` handler
-
-tryIt = do
-  print "------"
-  x <- getYahooDataSafe "A"
-  print x
-  print "======"
