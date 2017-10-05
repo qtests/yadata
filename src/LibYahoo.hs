@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE BangPatterns #-}
 
 module LibYahoo
     (   getYahooData
@@ -64,52 +65,72 @@ instance Show YahooException where
 
 instance Exception YahooException
 
+fetchCompanyData :: String -> IO (Either YahooException B.ByteString)
+fetchCompanyData ticker =
+  S.withSession $ \sess -> do
+    r <- S.get sess (crumbleLink "KO")
+    let rs = r ^. responseStatus . statusCode
+    let rb = r ^. responseBody
+    if rs /= 200
+      then return $ Left YCookieCrumbleException
+      else do
+        let crb = getCrumble rb
+        r2 <- S.get sess (yahooDataLink ticker (C.unpack crb))
+        let r2s = r2 ^. responseStatus . statusCode
+        let r2b = r2 ^. responseBody
+        if r2s /= 200
+          then return $ Left YStatusCodeException
+          else return $ Right r2b
+
 getCrumbleSafe :: IO (Either YahooException C.ByteString)
-getCrumbleSafe = S.withSession $ \sess -> do
-  d <-
-    (E.try $ S.get sess (crumbleLink "KO")) :: IO (Either YahooException (Response C.ByteString))
-  case d of
-    Left e -> return $ Left  YCookieCrumbleException
-    Right crb -> do
-      let status = crb ^. responseStatus . statusCode
-      let body = crb ^. responseBody
-      if status /= 200 then
-          return $ Left YCookieCrumbleException
-      else return $ Right $ getCrumble body
+getCrumbleSafe =
+  S.withSession $ \sess -> do
+    d <-
+      E.try
+        (let !x = S.get sess (crumbleLink "KO")
+         in x) :: IO (Either YahooException (Response C.ByteString))
+    case d of
+      Left e -> return $ Left YCookieCrumbleException
+      Right crb -> do
+        let status = crb ^. responseStatus . statusCode
+        let body = crb ^. responseBody
+        if status /= 200
+          then return $ Left YCookieCrumbleException
+          else return $ Right $ getCrumble body
 
 
-getYahooDataSafe :: String -> IO (Either YahooException C.ByteString)
+getYahooDataSafe :: String -> IO String
 getYahooDataSafe ticker = do
   crumb <- getCrumbleSafe :: IO (Either YahooException C.ByteString)
   case crumb of
-    Left e ->  return $ Left YCookieCrumbleException
-    Right crb -> S.withSession $ \sess -> do
-      result <-
-        (E.try $ S.get sess (yahooDataLink ticker (C.unpack crb))) :: IO (Either YahooException (Response C.ByteString))
-      case result of
-        Left e -> return $ Left YStatusCodeException
-        Right d -> do
-          let status = d ^. responseStatus . statusCode
-          let body = d ^. responseBody
-          if status /= 200 then
-              return $ Left YStatusCodeException
-          else return $ Right body
+    Left e -> return $ show YCookieCrumbleException
+    Right crb ->
+      S.withSession $ \sess -> do
+        result <-
+          E.try
+            (let !x = S.get sess (yahooDataLink ticker (C.unpack crb))
+             in x) :: IO (Either YahooException (Response C.ByteString))
+        case result of
+          Left e -> return $ show YStatusCodeException
+          Right d -> do
+            let status = d ^. responseStatus . statusCode
+            let body = d ^. responseBody
+            if status /= 200
+              then return $ show YStatusCodeException
+              else return $ C.unpack body
 
 
-fetchCompanyData :: String -> IO (Either YahooException B.ByteString)
-fetchCompanyData ticker = S.withSession $ \sess -> do
-   r <- S.get sess (crumbleLink "KO")
-   let rs = r ^. responseStatus . statusCode
-   let rb = r ^. responseBody
-   if rs /= 200 then
-         return $ Left YCookieCrumbleException
-   else
-     do
-       let crb = getCrumble rb
-       r2 <- S.get sess (yahooDataLink ticker (C.unpack crb))
-       let r2s = r2 ^. responseStatus . statusCode
-       let r2b = r2 ^. responseBody
-       if r2s /= 200 then
-           return $ Left YStatusCodeException
-       else
-        return $ Right r2b
+
+
+handler :: YahooException -> IO ()
+handler YStatusCodeException = putStrLn "status code exception"
+handler YCookieCrumbleException = putStrLn "cookie crumble exception"
+
+
+testIt = tryIt `catch` handler
+
+tryIt = do
+    print "------"
+    x <- getYahooDataSafe "A"
+    print x
+    print "======"
