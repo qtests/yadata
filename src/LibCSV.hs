@@ -58,7 +58,7 @@ getColumnIndexInCSV csv columnName =
 getColumnInCSV ::  Either a CSV -> String -> Either String [String]
 getColumnInCSV csv columnName = 
     either 
-       (\r -> Left "Error reading CSV!" ) 
+       (\_ -> Left "Error reading CSV!" ) 
        (\x -> applyToColumnInCSV id x columnName) csv
 
     

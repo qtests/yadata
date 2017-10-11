@@ -25,8 +25,8 @@ import qualified Data.ByteString.Lazy.Char8 as C
 -- https://stackoverflow.com/questions/44044263/yahoo-finance-historical-data-downloader-url-is-not-working
 -- https://stackoverflow.com/questions/1317399/getting-the-local-appdata-folder-in-haskell
 
-prices :: Num b => Either String [(UTCTime, b)] -> [(LocalTime, b)]
-prices x = map (first (utcToLocalTime utc)) (concat $ rights [x])
+preparePrices :: Num b => Either String [(UTCTime, b)] -> [(LocalTime, b)]
+preparePrices x = map (first (utcToLocalTime utc)) (concat $ rights [x])
 
 priceTimeSeries :: String -> IO (Either String [(UTCTime, Double)] )
 priceTimeSeries ticker = do 
@@ -45,7 +45,7 @@ main = do
 
     -- Plot
     let plotFileName = "plot-series.svg"
-    toFile def plotFileName $ plot (line "" [prices ts])
+    toFile def plotFileName $ plot (line "" [preparePrices ts])
     putStrLn $ "Plot saved to: " ++ plotFileName
     createProcess (shell $ "firefox " ++ plotFileName)
     return $ Right "__End__"
