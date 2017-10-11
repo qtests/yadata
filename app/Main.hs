@@ -28,20 +28,24 @@ import qualified Data.ByteString.Lazy.Char8 as C
 prices :: Num b => Either String [(UTCTime, b)] -> [(LocalTime, b)]
 prices x = map (first (utcToLocalTime utc)) (concat $ rights [x])
 
+priceTimeSeries :: String -> IO (Either String [(UTCTime, Double)] )
+priceTimeSeries ticker = do 
+   ydata <- getYahooData ticker :: IO (Either YahooException C.ByteString)
+   let ycsv = either (\_ -> Left YStatusCodeException) id
+               (mapM (\x -> parseCSV "Ticker" (DBLU.toString x )) ydata)
+   let dates = getColumnInCSV ycsv "Date"
+   let closep = getColumnInCSV ycsv "Adj Close"
+   return $ zip <$> (map (read2UTCTime "%Y-%m-%d") <$> dates) <*> (map read2Double <$> closep)
+  
 
 main :: IO (Either YahooException C.ByteString)
 main = do
-   ydata <- getYahooData "IBM" :: IO (Either YahooException C.ByteString)
-   case ydata of
-       Left x -> return $ Left YStatusCodeException
-       Right yd -> do
-         let yd_csv = parseCSV "IBM" (DBLU.toString yd)
-         let dates = getColumnInCSV yd_csv "Date"
-         let closep = getColumnInCSV yd_csv "Adj Close"
-         let ts = zip <$> (map (read2UTCTime "%Y-%m-%d") <$> dates) <*> (map read2Double <$> closep)
-         -- Plot
-         let plotFileName = "plot-series.svg"
-         toFile def plotFileName $ plot (line "" [prices ts])
-         putStrLn $ "Plot saved to: " ++ plotFileName
-         createProcess (shell $ "firefox " ++ plotFileName)
-         return $ Right "__End__"
+    
+    ts <- priceTimeSeries "IBM"
+
+    -- Plot
+    let plotFileName = "plot-series.svg"
+    toFile def plotFileName $ plot (line "" [prices ts])
+    putStrLn $ "Plot saved to: " ++ plotFileName
+    createProcess (shell $ "firefox " ++ plotFileName)
+    return $ Right "__End__"
