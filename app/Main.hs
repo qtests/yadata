@@ -13,7 +13,7 @@ import System.Environment
 dispatch :: [(String, [String] -> IO ())]  
 dispatch =  [ ("view", viewTL), ("download", downloadH) ]
 
--- To view ticker files, run:
+-- To view ticker file, run:
 --    stack exec yadata-exe view sp500.csv | more
 
 -- To download historical time series for the company XYZ in line 5, run:
