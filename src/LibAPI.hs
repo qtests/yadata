@@ -61,10 +61,11 @@ downloadH [fileName, numberString] = do
     case ticker_csv of
         Left _ -> return ()
         Right ticker -> do
-                ts <- priceTimeSeries $ (concat ticker) !! 0
+                let tk = (concat ticker) !! 0
+                ts <- priceTimeSeries tk 
                 -- Plot
                 let plotFileName = "plot-series.svg"
                 toFile def plotFileName $ plot (line "" [preparePrices ts])
-                putStrLn $ "Plot saved to: " ++ plotFileName
+                putStrLn $ tk ++ " plot saved to: " ++ plotFileName
                 createProcess (shell $ "firefox " ++ plotFileName)
                 return () 
