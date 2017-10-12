@@ -3,7 +3,8 @@
 module LibAPI
 ( 
     viewTL,
-    downloadH
+    downloadH,
+    priceTimeSeries
 ) where
 
 import LibYahoo
