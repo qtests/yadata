@@ -2,50 +2,26 @@
 
 module Main where
 
-import LibYahoo
-import LibCSV
+import LibAPI
 
--- import CSV related functions
-import Text.CSV
-import qualified Data.ByteString.Lazy.UTF8 as DBLU
+import System.Environment
 
--- import other
-import Data.Time
-import Data.Either
-import Control.Arrow (first)
-
--- import graphiccs
-import Graphics.Rendering.Chart.Easy
-import Graphics.Rendering.Chart.Backend.Diagrams
-
--- import system process
-import System.Process
-import qualified Data.ByteString.Lazy.Char8 as C
 -- http://hackage.haskell.org/package/wreq-0.5.1.0/docs/Network-Wreq-Session.html
 -- https://stackoverflow.com/questions/44044263/yahoo-finance-historical-data-downloader-url-is-not-working
 -- https://stackoverflow.com/questions/1317399/getting-the-local-appdata-folder-in-haskell
 
-preparePrices :: Num b => Either String [(UTCTime, b)] -> [(LocalTime, b)]
-preparePrices x = map (first (utcToLocalTime utc)) (concat $ rights [x])
+dispatch :: [(String, [String] -> IO ())]  
+dispatch =  [ ("view", viewTL), ("download", downloadH) ]
 
-priceTimeSeries :: String -> IO (Either String [(UTCTime, Double)] )
-priceTimeSeries ticker = do 
-   ydata <- getYahooData ticker :: IO (Either YahooException C.ByteString)
-   let ycsv = either (\_ -> Left YStatusCodeException) id
-               (mapM (\x -> parseCSV "Ticker" (DBLU.toString x )) ydata)
-   let dates = getColumnInCSV ycsv "Date"
-   let closep = getColumnInCSV ycsv "Adj Close"
-   return $ zip <$> (map (read2UTCTime "%Y-%m-%d") <$> dates) <*> (map read2Double <$> closep)
-  
+-- To view ticker files, run:
+--    stack exec yadata-exe view sp500.csv | more
 
-main :: IO (Either YahooException C.ByteString)
+-- To download historical time series for the company XYZ in line 5, run:
+--    stack exec yadata-exe downlaod sp500.csv 5
+
+main :: IO () --(Either YahooException C.ByteString)
 main = do
-    
-    ts <- priceTimeSeries "IBM"
+    (command:args) <- getArgs  
+    let (Just action) = lookup command dispatch  
+    action args 
 
-    -- Plot
-    let plotFileName = "plot-series.svg"
-    toFile def plotFileName $ plot (line "" [preparePrices ts])
-    putStrLn $ "Plot saved to: " ++ plotFileName
-    createProcess (shell $ "firefox " ++ plotFileName)
-    return $ Right "__End__"
