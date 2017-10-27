@@ -69,3 +69,15 @@ downloadH [fileName, numberString] = do
                 putStrLn $ tk ++ " plot saved to: " ++ plotFileName
                 createProcess (shell $ "firefox " ++ plotFileName)
                 return () 
+
+-- let ts_ = concat $ rights [ts1]
+-- fmap (fst . minimum) ts
+-- 
+-- fst $ unzip ts_
+-- addUTCTime (60*60*24) mint
+
+-- let mint = fmap (fst . minimum) ts
+-- let maxt = fmap (fst . maximum) ts
+-- let timediff = fmap (round . toRational) $ fmap ( / (60*60*24)) (diffUTCTime <$> maxt <*> mint)
+-- let dayIndex = do; a<- timediff; return [1..a]
+-- fmap (\x -> fmap (addUTCTime (60*60*x)) mint)
