@@ -6,7 +6,8 @@ module LibAPI
     downloadH,
     priceTimeSeries,
     getDateTimeInterval,
-    isWorkingDay
+    isWorkingDay,
+    alignTS
 ) where
 
 import LibYahoo
@@ -22,7 +23,7 @@ import Data.Time
 import Data.Time.Calendar.WeekDate
 import qualified Data.Map as Map
 import Data.Either
-import Control.Arrow (first)
+import Control.Arrow (first, second)
 
 -- import graphiccs
 import Graphics.Rendering.Chart.Easy
@@ -66,11 +67,27 @@ isWorkingDay x =
         (_, _, aWeekDay) = myWeekDay
     in aWeekDay < 6
 
+-- https://downloads.haskell.org/~ghc/6.12.2/docs/html/libraries/containers-0.3.0.0/Data-Map.html
+alignTS' :: Num a => [UTCTime] -> [(UTCTime, a)] -> [(UTCTime, Maybe a)]
+alignTS' [] ts = map (second (Just))  ts
+alignTS' _  [] = []
+alignTS' idx ts = zip idx combinedValues
+     where   tvMap = foldl (\mm (key, value) -> Map.insert key value mm) Map.empty ts
+             combinedValues = map (\v -> Map.lookup v tvMap) idx                          
+
+alignTS :: Num a => Either String [UTCTime] -> Either String [(UTCTime, a)] -> Either String [(UTCTime, Maybe a)]                    
+alignTS idx ts = do 
+    ind <- idx
+    dta <- ts
+    return $ alignTS' ind dta
+
+-- ts <- priceTimeSeries "IBM"
+-- let ts1 = fmap (take 20) ts
+-- let a = fmap (filter isWorkingDay) $ getDateTimeInterval ts1
     
 -- ------------------------------------------
 -- API
 ---------------------------------------------
-
 
 viewTL :: [String] -> IO ()  
 viewTL [fileName] = do  
@@ -97,26 +114,3 @@ downloadH [fileName, numberString] = do
                 createProcess (shell $ "firefox " ++ plotFileName)
                 return () 
 
-
-insertMaybePair :: Ord k => Map.Map k v -> (k, Maybe v) -> Map.Map k v
-insertMaybePair myMap (_,Nothing) = myMap
-insertMaybePair myMap (key,(Just value)) = Map.insert key value myMap
-
-alignTS :: [UTCTime] -> [(UTCTime, Double)] -> [(UTCTime, Double)]
-alignTS [] ts = ts
-alignTS _  [] = []
-
--- https://downloads.haskell.org/~ghc/6.12.2/docs/html/libraries/containers-0.3.0.0/Data-Map.html
--- combineTS index ts = TS completeTimes combinedValues
---    where bothTimes = mconcat [t1,t2]
---          completeTimes = [minimum bothTimes .. maximum bothTimes]
---          tvMap = foldl insertMaybePair Map.empty (zip t1 v1)
---          updatedMap = foldl insertMaybePair tvMap (zip t2 v2)
---          combinedValues = map (\v -> Map.lookup v updatedMap)
---                               completeTimes                          
-               
- 
-
--- ts <- priceTimeSeries "IBM"
--- let ts1 = fmap (take 20) ts
--- let a = fmap (filter isWorkingDay) $ getDateTimeInterval ts1
