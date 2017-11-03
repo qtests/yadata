@@ -37,6 +37,7 @@ library
                      , Chart
                      , Chart-diagrams
                      , process
+                     , containers
 
 
   default-language:    Haskell2010

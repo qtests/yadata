@@ -28,6 +28,7 @@ crumbleLink :: String -> String
 crumbleLink ticker =
   "https://finance.yahoo.com/quote/" ++ ticker ++ "/history?p=" ++ ticker
 
+  -- https://stackoverflow.com/questions/12916353/how-do-i-convert-from-unixtime-to-a-date-time-in-haskell
 yahooDataLink :: String -> String -> String
 yahooDataLink ticker crumb =
   "https://query1.finance.yahoo.com/v7/finance/download/" ++ ticker ++
