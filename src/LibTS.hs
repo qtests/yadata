@@ -31,12 +31,12 @@ isAWorkingDay x =
 
 getDateTimeInterval' :: Num a => [(UTCTime, a)] -> [UTCTime]
 getDateTimeInterval' tseries = 
-    fmap (\x -> addUTCTime (24*60*60*( fromRational x)) mint) [0 .. timediff]
+    fmap (\x -> addUTCTime (24*60*60*( fromRational x)) mint) [0 .. interval]
     where
         (dates, _) = unzip tseries
         mint = minimum dates
         maxt = maximum dates
-        timediff = (toRational (diffUTCTime maxt mint)) / (60*60*24)
+        interval = (toRational (diffUTCTime maxt mint)) / (60*60*24)
 
 
 getDateTimeInterval :: (Ord a, Num a) => Either String [(UTCTime, a)] -> Either String [UTCTime]
