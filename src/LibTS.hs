@@ -5,11 +5,12 @@
 
 module LibTS
 ( 
-    getDateTimeInterval,
+    getDateTimeIntervalTS,
     isAWorkingDay,
     alignTS,
     alignTSIndex,
-    backFillTS
+    backFillTS,
+    alignAndBackfillTS
 ) where
 
 import Data.Time
@@ -29,8 +30,8 @@ isAWorkingDay x =
 
 -- https://two-wrongs.com/haskell-time-library-tutorial
 
-getDateTimeInterval' :: Num a => [(UTCTime, a)] -> [UTCTime]
-getDateTimeInterval' tseries = 
+getDateTimeIntervalTS' :: Num a => [(UTCTime, a)] -> [UTCTime]
+getDateTimeIntervalTS' tseries = 
     fmap (\x -> addUTCTime (24*60*60*( fromRational x)) mint) [0 .. interval]
     where
         (dates, _) = unzip tseries
@@ -39,15 +40,15 @@ getDateTimeInterval' tseries =
         interval = (toRational (diffUTCTime maxt mint)) / (60*60*24)
 
 
-getDateTimeInterval :: (Ord a, Num a) => Either String [(UTCTime, a)] -> Either String [UTCTime]
-getDateTimeInterval tseries = do
+getDateTimeIntervalTS :: (Ord a, Num a) => Either String [(UTCTime, a)] -> Either String [UTCTime]
+getDateTimeIntervalTS tseries = do
     tseries' <- tseries
-    return $ getDateTimeInterval' tseries'
+    return $ getDateTimeIntervalTS' tseries'
 
 
 -- https://downloads.haskell.org/~ghc/6.12.2/docs/html/libraries/containers-0.3.0.0/Data-Map.html
 alignTS' :: Num a => [UTCTime] -> [(UTCTime, a)] -> [(UTCTime, Maybe a)]
-alignTS' [] ts = alignTS' ( filter isAWorkingDay $ getDateTimeInterval' ts) ts  -- Add "getDateTimeInterval"
+alignTS' [] ts = alignTS' ( filter isAWorkingDay $ getDateTimeIntervalTS' ts) ts 
 alignTS' _ [] = []
 alignTS' idx ts = zip idx' combinedValues
      where   tvMap = foldl (\mm (key, value) -> Map.insert key value mm) Map.empty ts
@@ -82,7 +83,19 @@ backFillTS ts = do
     return $ zip tsIndex (backFillTS' values)
     
 
--- allignAndBackfill ??
+alignAndBackfillTS :: (Eq a, Num a) => Either String [(UTCTime, a)] -> Either String [(UTCTime, a)]
+alignAndBackfillTS ts = do
+    dta <- ts
+    let tsa =  alignTS' [] dta 
+    let (tsIndex, values) = unzip tsa
+    let valuesB = backFillTS' values
+    let values' = if any (== Nothing) valuesB 
+                      then reverse (backFillTS' $ reverse valuesB ) else valuesB
+    if all (== Nothing) values' 
+        then Left "No data!"
+        else return $ zip tsIndex ( catMaybes values' )
+
+-- XTS ?
 
 -- ts <- priceTimeSeries "IBM"
 -- let ts1 = fmap (take 20) ts
