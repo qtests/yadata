@@ -39,12 +39,14 @@ isAWorkingDay x =
 -- https://two-wrongs.com/haskell-time-library-tutorial
 
 getDateTimeInterval :: [UTCTime] -> [UTCTime]
-getDateTimeInterval timeIndex = 
-    fmap (\x -> addUTCTime (24*60*60*( fromRational x)) mint) [0 .. interval]
-    where
-        mint = minimum timeIndex
-        maxt = maximum timeIndex
-        interval = (toRational (diffUTCTime maxt mint)) / (60*60*24)
+getDateTimeInterval timeIndex =
+    if (length timeIndex == 0) 
+        then [] 
+        else fmap (\x -> addUTCTime (24*60*60*( fromRational x)) mint) [0 .. interval]
+               where
+                   mint = minimum timeIndex
+                   maxt = maximum timeIndex
+                   interval = (toRational (diffUTCTime maxt mint)) / (60*60*24)
 
 
 getDateTimeIntervalTS' :: Num a => [(UTCTime, a)] -> [UTCTime]
@@ -62,6 +64,7 @@ getDateTimeIntervalTS tseries = do
 
 -- https://downloads.haskell.org/~ghc/6.12.2/docs/html/libraries/containers-0.3.0.0/Data-Map.html
 alignTS' :: Num a => [UTCTime] -> [(UTCTime, a)] -> [(UTCTime, Maybe a)]
+alignTS' [] [] = []
 alignTS' [] ts = alignTS' ( filter isAWorkingDay $ getDateTimeIntervalTS' ts) ts 
 alignTS' _ [] = []
 alignTS' idx ts = zip idx' allValues
@@ -117,15 +120,15 @@ createTSRaw :: (Eq a, Num a) => [UTCTime] -> [a] -> TS a
 createTSRaw times values = TS abtimes abvalues
     where 
         ab = alignAndBackfillTS (zip times values)
-        (abtimes, abvalues) = if (isLeft ab) then ([], []) else unzip (concat $ rights [ab])
+        (abtimes, abvalues) = if (isLeft ab || fmap length ab == Right 0) then ([], []) else unzip (concat $ rights [ab])
 
         
 createTSEither :: (Eq a, Num a) => Either String [(UTCTime, a)]  -> TS a
 createTSEither ts = TS abtimes abvalues
     where
-        ts1 = if (isLeft ts) then [] else (concat $ rights [ts])
+        ts1 = if (isLeft ts || fmap length ts == Right 0) then [] else (concat $ rights [ts])
         ab = alignAndBackfillTS ts1 
-        (abtimes, abvalues) = if (isLeft ab) then ([], []) else unzip (concat $ rights [ab])
+        (abtimes, abvalues) = if (isLeft ab ||fmap length ab == Right 0) then ([], []) else unzip (concat $ rights [ab])
 
 
 instance Show a => Show (TS a) where
@@ -151,7 +154,13 @@ readFileTS path = do
     return $ TS date value
  
 
--- XTS ?
+-- XTS
+
+type ColsXTS a = [a]
+type ColNameXTS = String
+data XTS a = XTS [UTCTime] [ColsXTS a] [ColNameXTS]
+
+
 
 -- ts <- priceTimeSeries "IBM"
 -- let ts1 = fmap (take 20) ts
