@@ -64,10 +64,10 @@ getDateTimeIntervalTS tseries = do
 alignTS' :: Num a => [UTCTime] -> [(UTCTime, a)] -> [(UTCTime, Maybe a)]
 alignTS' [] ts = alignTS' ( filter isAWorkingDay $ getDateTimeIntervalTS' ts) ts 
 alignTS' _ [] = []
-alignTS' idx ts = zip idx' combinedValues
+alignTS' idx ts = zip idx' allValues
      where   tvMap = foldl (\mm (key, value) -> Map.insert key value mm) Map.empty ts
              idx' = sort idx
-             combinedValues = map (\v -> Map.lookup v tvMap) idx'                          
+             allValues = map (\v -> Map.lookup v tvMap) idx'                          
 
 
 alignTSIndex :: Num a => Either String [UTCTime] -> Either String [(UTCTime, a)] -> Either String [(UTCTime, Maybe a)]                    
