@@ -100,16 +100,19 @@ backFillTS ts = do
     return $ zip tsIndex (backFillTS' values)
     
 
-alignAndBackfillTS :: (Eq a, Num a) => [(UTCTime, a)] -> Either String [(UTCTime, a)]
-alignAndBackfillTS ts = do
-    let tsa =  alignTS' [] ts 
-    let (tsIndex, values) = unzip tsa
+alignAndBackfillTSIndex :: (Eq a, Num a) => [UTCTime] -> [(UTCTime, a)] -> Either String [(UTCTime, a)]
+alignAndBackfillTSIndex index ts = do
+    let (tsIndex, values) = unzip $ alignTS' index ts
     let valuesB = backFillTS' values
     let values' = if any (== Nothing) valuesB 
                       then reverse (backFillTS' $ reverse valuesB ) else valuesB
     if all (== Nothing) values' 
         then Left "No data!"
         else return $ zip tsIndex ( catMaybes values' )
+
+alignAndBackfillTS :: (Eq a, Num a) => [(UTCTime, a)] -> Either String [(UTCTime, a)]
+alignAndBackfillTS = alignAndBackfillTSIndex []
+
 
 -- TS -------------------------------------------------------------------------------------------
 -- **********************************************************************************************
@@ -154,11 +157,24 @@ readFileTS path = do
     return $ TS date value
  
 
--- XTS
+-- XTS -------------------------------------------------------------------------------------------
+-- **********************************************************************************************
 
-type ColsXTS a = [a]
+type ColXTS a = [a]
 type ColNameXTS = String
-data XTS a = XTS [UTCTime] [ColsXTS a] [ColNameXTS]
+data XTS a = XTS [UTCTime] [ColXTS a] [ColNameXTS]
+
+createXTSRaw :: (Eq a, Num a) => [UTCTime] -> [ColXTS a] -> [ColNameXTS] -> XTS a
+createXTSRaw times values colnames = XTS abtimes abvalues colnames
+   where
+      abtimes = getDateTimeInterval times
+      abvalues = fmap (\x-> let ab = alignAndBackfillTSIndex abtimes (zip times x)
+                                (_, xvalues) = 
+                                      if (isLeft ab || fmap length ab == Right 0) 
+                                      then ([], []) 
+                                      else unzip (concat $ rights [ab])
+                            in xvalues
+                      ) values
 
 
 
