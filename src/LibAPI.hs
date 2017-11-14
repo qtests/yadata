@@ -39,8 +39,8 @@ priceTimeSeries ticker = do
    ydata <- getYahooData ticker :: IO (Either YahooException C.ByteString)
    let ycsv = either (\_ -> Left YStatusCodeException) id
                (mapM (\x -> parseCSV "Ticker" (DBLU.toString x )) ydata)
-   let dates = getColumnInCSV ycsv "Date"
-   let closep = getColumnInCSV ycsv "Adj Close"
+   let dates = getColumnInCSVEither ycsv "Date"
+   let closep = getColumnInCSVEither ycsv "Adj Close"
    return $ zip <$> (map (read2UTCTime "%Y-%m-%d") <$> dates) <*> (map read2Double <$> closep)
 
 

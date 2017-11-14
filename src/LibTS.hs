@@ -152,8 +152,13 @@ readFileTS path = do
     let tstext = readFile path
     txt <- tstext
     let ptxt = parseCSV path txt
-    let date =  either (\_-> []) (\x-> fmap (read2UTCTime "%Y-%m-%d %H:%M:%S %Z") x) (getColumnInCSV ptxt "Date")
-    let value = either (\_-> []) (\x-> fmap read2Double x) (getColumnInCSV ptxt "Value")
+    let date =  either 
+                (\_-> []) 
+                (\x-> fmap (read2UTCTime "%Y-%m-%d %H:%M:%S %Z") x) 
+                                          (getColumnInCSVEither ptxt "Date")
+    let value = either 
+                (\_-> []) 
+                (\x-> fmap read2Double x) (getColumnInCSVEither ptxt "Value")
     return $ TS date value
  
 
@@ -167,7 +172,7 @@ data XTS a = XTS [UTCTime] [ColXTS a] [ColNameXTS]
 createXTSRaw :: (Eq a, Num a) => [UTCTime] -> [ColXTS a] -> [ColNameXTS] -> XTS a
 createXTSRaw times values colnames = XTS abtimes abvalues colnames
    where
-      abtimes = getDateTimeInterval times
+      abtimes = filter isAWorkingDay $ getDateTimeInterval times
       abvalues = fmap (\x-> let ab = alignAndBackfillTSIndex abtimes (zip times x)
                                 (_, xvalues) = 
                                       if (isLeft ab || fmap length ab == Right 0) 
@@ -176,6 +181,22 @@ createXTSRaw times values colnames = XTS abtimes abvalues colnames
                             in xvalues
                       ) values
 
+
+readFileXTS :: FilePath -> IO (XTS Double)
+readFileXTS path = do 
+    let tstext = readFile path
+    txt <- tstext
+    let ptxt = parseCSV path txt
+    case ptxt of
+        Left _    -> return $ XTS [] [] []
+        Right dta -> do
+            let dates = either 
+                        (\_ -> []) 
+                        (\x -> fmap (read2UTCTime "%Y-%m-%d %H:%M:%S %Z") x ) $ getColumnInCSV dta "Date"
+            let restD = delColumnInCSV dta "Date"
+            -- Process each column 
+            let colnames = if (length dta == 0) then [] else filter (/= "Date") $ head dta
+            return $ XTS dates [] colnames
 
 
 -- ts <- priceTimeSeries "IBM"

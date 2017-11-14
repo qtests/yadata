@@ -4,6 +4,8 @@ module LibCSV
     ( read2Double
     , read2UTCTime
     , getColumnInCSV
+    , getColumnInCSVEither
+    , delColumnInCSV
     ) where
 
 import Text.CSV
@@ -34,7 +36,7 @@ applyToColumnInCSV func csv column =
     Left
     (Right . func . elements) columnIndex
     where
-      columnIndex = getColumnIndexInCSV csv column
+      columnIndex = findColumnIndexInCSV csv column
       nfieldsInFile = length $ head csv
       records = tail $ filter (\record -> nfieldsInFile == length record) csv
       elements ci = map (\record -> genericIndex record ci) records
@@ -44,8 +46,8 @@ applyToColumnInCSV func csv column =
    Gets a column from a CSV value.
    Returns (Left errorMessage) or (Right index)
 -}
-getColumnIndexInCSV :: CSV -> String -> Either String Integer
-getColumnIndexInCSV csv columnName =
+findColumnIndexInCSV :: CSV -> String -> Either String Integer
+findColumnIndexInCSV csv columnName =
     case lookupResponse of
           Nothing -> Left "The column does not exist in this CSV!"
           Just x -> Right (fromIntegral x)
@@ -54,11 +56,38 @@ getColumnIndexInCSV csv columnName =
       lookupResponse = findIndex (== columnName) (head csv)
 
 
+findColumnsIndicesInCSV :: CSV -> String -> [Integer]
+findColumnsIndicesInCSV csv columnsNames =
+      map fromIntegral indices
+      where
+            indices = findIndices (== columnsNames) (head csv)
 
-getColumnInCSV ::  Either a CSV -> String -> Either String [String]
+-- each n = map head . takeWhile (not . null) . iterate (drop n)
+getColumnInCSV :: CSV -> String -> Either String [String]
 getColumnInCSV csv columnName = 
-    either 
-       (\_ -> Left "Error reading CSV!" ) 
-       (\x -> applyToColumnInCSV id x columnName) csv
+      applyToColumnInCSV id csv columnName   
 
-    
+
+getColumnInCSVEither :: Either a CSV -> String -> Either String [String]
+getColumnInCSVEither csv columnName = do 
+      either (\_ -> Left "Error reading CSV!" ) 
+             (\x -> applyToColumnInCSV id x columnName) csv
+
+
+removeAt :: Int -> [a] -> [a]
+removeAt i [] = []
+removeAt i list =
+      if (i > length list || i < 0) 
+            then list
+            else (init alist) ++ blist
+                     where (alist, blist) = splitAt (i + 1) list
+
+
+delColumnInCSV :: CSV -> String -> [[Field]]
+delColumnInCSV acsv columnName = 
+      map (removeAt columnIndex') records
+      where
+         columnIndex = findColumnIndexInCSV acsv columnName
+         columnIndex' = fromInteger $ either (\_ -> -1) id columnIndex
+         nfieldsInFile = length $ head acsv
+         records = tail $ filter (\record -> nfieldsInFile == length record) acsv
