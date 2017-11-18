@@ -11,7 +11,7 @@ import System.Environment
 -- https://stackoverflow.com/questions/1317399/getting-the-local-appdata-folder-in-haskell
 
 dispatch :: [(String, [String] -> IO ())]  
-dispatch =  [ ("view", viewTL), ("download", downloadH) ]
+dispatch =  [ ("view", viewTL), ("download", downloadH2Graph) ]
 
 -- To view ticker file, run:
 --    stack exec yadata-exe view sp500.csv | more

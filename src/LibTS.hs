@@ -15,7 +15,18 @@ module LibTS
     createTSRaw,
     createTSEither,
     writeFileTS,
-    readFileTS
+    readFileTS,
+    combineTS,
+    indexTS,
+    dataTS,
+    XTS(..),
+    createXTSRaw,
+    writeFileXTS,
+    readFileXTS,
+    convertTS2XTS,
+    combineXTSnTS,
+    indexXTS,
+    dataXTS
 ) where
 
 import Data.Time
@@ -26,6 +37,8 @@ import Data.Maybe
 import Data.Either
 import Text.CSV
 import Control.Arrow (second)
+import Data.Char
+import Data.String
 
 import LibCSV
 -- ###########################################################################
@@ -70,7 +83,7 @@ alignTS' _ [] = []
 alignTS' idx ts = zip idx' allValues
      where   tvMap = foldl (\mm (key, value) -> Map.insert key value mm) Map.empty ts
              idx' = sort idx
-             allValues = map (\v -> Map.lookup v tvMap) idx'                          
+             allValues = fmap (\v -> Map.lookup v tvMap) idx'                          
 
 
 alignTSIndex :: Num a => Either String [UTCTime] -> Either String [(UTCTime, a)] -> Either String [(UTCTime, Maybe a)]                    
@@ -136,7 +149,7 @@ createTSEither ts = TS abtimes abvalues
 
 instance Show a => Show (TS a) where
     show (TS times values) = mconcat rows
-      where rows = zipWith (\x y -> mconcat [show x," | ",show y,"\n"] ) times values
+      where rows = ["Date | Value\n"] ++ zipWith (\x y -> mconcat [show x," | ",show y,"\n"] ) times values
 
 
 writeFileTS :: (Show a) => FilePath -> TS a -> IO ()
@@ -160,7 +173,24 @@ readFileTS path = do
                 (\_-> []) 
                 (\x-> fmap read2Double x) (getColumnInCSVEither ptxt "Value")
     return $ TS date value
- 
+
+combineTS :: TS a -> TS a -> TS a
+combineTS ats bts = undefined
+
+
+-- Get the index
+indexTS :: TS a -> [UTCTime]
+indexTS ( TS ind _ ) = ind
+
+-- Get the data
+dataTS :: (Eq a, Num a) => TS a -> [a]
+dataTS ( TS _ dta ) = dta
+
+-- a <- readFileXTS "labas.csv"
+-- ts <- priceTimeSeries "IBM"
+-- let ts1 = fmap (take 20) ts
+-- let tx = createTSEither ts1
+-- print tx
 
 -- XTS -------------------------------------------------------------------------------------------
 -- **********************************************************************************************
@@ -190,16 +220,58 @@ readFileXTS path = do
     case ptxt of
         Left _    -> return $ XTS [] [] []
         Right dta -> do
+            -- -----------------------------------------------------------------------------------------
+            -- Add aligning !!! Add aligning !!! Add aligning !!! Add aligning !!! Add aligning !!! ----
+            -- -----------------------------------------------------------------------------------------
             let dates = either 
                         (\_ -> []) 
                         (\x -> fmap (read2UTCTime "%Y-%m-%d %H:%M:%S %Z") x ) $ getColumnInCSV dta "Date"
-            let restD = delColumnInCSV dta "Date"
-            -- Process each column 
+            let restD = (fmap . fmap ) read2Double $ transpose $ delColumnInCSV dta "Date"
             let colnames = if (length dta == 0) then [] else filter (/= "Date") $ head dta
-            return $ XTS dates [] colnames
+            return $ XTS dates restD colnames
 
 
--- ts <- priceTimeSeries "IBM"
--- let ts1 = fmap (take 20) ts
--- let tx = createTSEither ts1
--- print tx
+preparePrinting :: [String] -> String -> String
+preparePrinting dta sep = foldl (\x y -> x ++ sep ++ y ) "" dta
+
+
+instance Show a => Show (XTS a) where
+    show (XTS times values colNames) = mconcat rows
+      where rows = ["Date " ++ preparePrinting colNames " | " ++ "\n"] ++ 
+                    zipWith (\x y -> mconcat [show x, preparePrinting y " | ", "\n"] ) 
+                                        times ((fmap . fmap) show $ transpose values)
+
+
+writeFileXTS :: (Show a) => FilePath -> XTS a -> IO ()
+writeFileXTS path (XTS times values colNames) =
+    writeFile path tsString
+    where
+        -- formatTime defaultTimeLocale "%F %T (%Z)" x
+        tsString = mconcat $ ["Date " ++ preparePrinting colNames "," ++ "\n"] ++  
+                    zipWith (\x y -> mconcat [show x, preparePrinting y ",", "\n"] ) 
+                                        times ((fmap . fmap) show $ transpose values)
+
+
+convertTS2XTS :: String -> TS a -> XTS a
+convertTS2XTS colName (TS index value)  = XTS index [value] [colName]
+
+
+combineXTSnTS :: (Eq a, Num a) => XTS a -> String -> TS a -> XTS a
+combineXTSnTS (XTS [] [] []) colName ts = convertTS2XTS colName ts
+combineXTSnTS xts _ (TS [] []) = xts
+combineXTSnTS (XTS xindex xdata xcolNames) colName (TS index value) = fts
+    where
+        ats = alignAndBackfillTSIndex xindex (zip index value)
+        fts = case ats of
+                Left _    -> XTS xindex xdata xcolNames 
+                Right ts  -> XTS xindex (xdata ++ [ snd $ unzip ts ]) (xcolNames ++ [colName])
+
+
+-- Get the index
+indexXTS :: XTS a -> [UTCTime]
+indexXTS ( XTS ind _ _ ) = ind
+
+-- Get the data
+dataXTS :: Num a => XTS a -> ([ColXTS a], [String])
+dataXTS ( XTS _ dta cnames  ) = (dta, cnames)
+

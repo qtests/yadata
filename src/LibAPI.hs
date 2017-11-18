@@ -3,8 +3,9 @@
 module LibAPI
 ( 
     viewTL,
-    downloadH,
-    priceTimeSeries
+    downloadH2Graph,
+    priceTimeSeries,
+    downloadH2File
 ) where
 
 import LibYahoo
@@ -55,8 +56,8 @@ viewTL [fileName] = do
         numberedTasks = zipWith (\n linex -> show n ++ " - " ++ linex) [0..] tickers  
     putStr $ unlines numberedTasks
 
-downloadH :: [String] -> IO ()
-downloadH [fileName, numberString] = do
+downloadH2Graph :: [String] -> IO ()
+downloadH2Graph [fileName, numberString] = do
     contents <- readFile fileName
     let number = read numberString :: Int
     let ticker_line = (lines contents ) !! number 
@@ -72,4 +73,9 @@ downloadH [fileName, numberString] = do
                 putStrLn $ tk ++ " plot saved to: " ++ plotFileName
                 createProcess (shell $ "firefox " ++ plotFileName)
                 return () 
+
+
+downloadH2File :: [String] -> IO ()
+downloadH2File tickers = undefined
+
 
