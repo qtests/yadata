@@ -39,6 +39,7 @@ import Text.CSV
 import Control.Arrow (second)
 import Data.Char
 import Data.String
+import Data.Semigroup
 
 import LibCSV
 -- ###########################################################################
@@ -175,13 +176,31 @@ readFileTS path = do
                 (\x-> fmap read2Double x) (getColumnInCSVEither ptxt "Value")
     return $ TS date value
 
+
 combineTS :: TS a -> TS a -> TS a
-combineTS ats bts = undefined
+combineTS (TS [] []) ts2 = ts2
+combineTS ts1 (TS [] []) = ts1
+combineTS (TS t1 v1) (TS t2 v2) = undefined -- TS completeTimes combinedValues
+--    where bothTimes = mconcat [t1,t2]
+--          completeTimes = [minimum bothTimes .. maximum bothTimes]
+--          tvMap = foldl insertMaybePair Map.empty (zip t1 v1)
+--          updatedMap = foldl insertMaybePair tvMap (zip t2 v2)
+--          combinedValues = map (\v -> Map.lookup v updatedMap) completeTimes
+
+
+instance Semigroup (TS a) where
+   (<>) = combineTS
+
+
+instance Monoid (TS a) where
+   mempty = TS [] []
+   mappend = (<>)
 
 
 -- Get the index
 indexTS :: TS a -> [UTCTime]
 indexTS ( TS ind _ ) = ind
+
 
 -- Get the data
 dataTS :: (Eq a, Num a) => TS a -> [a]
