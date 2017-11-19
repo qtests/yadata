@@ -75,8 +75,7 @@ downloadH2Graph [fileName, numberString] = do
                 return () 
 
 -- https://stackoverflow.com/questions/17719620/while-loop-in-haskell-with-a-condition
--- http://www.programming-idioms.org/idiom/78/do-while-loop/979/haskell
--- https://stackoverflow.com/questions/27857541/abstraction-for-monadic-recursion-with-unless
+-- https://stackoverflow.com/questions/27857541/abstraction-for-monadic-recursion-  -unless
 
 downloadH2File :: [String] -> IO ()
 downloadH2File tickers = do

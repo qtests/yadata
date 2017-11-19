@@ -17,7 +17,7 @@ dispatch =  [ ("view", viewTL), ("download", downloadH2Graph) ]
 --    stack exec yadata-exe view sp500.csv | more
 
 -- To download historical time series for the company XYZ in line 5, run:
---    stack exec yadata-exe downlaod sp500.csv 5
+--    stack exec yadata-exe download sp500.csv 5
 
 main :: IO () --(Either YahooException C.ByteString)
 main = do
