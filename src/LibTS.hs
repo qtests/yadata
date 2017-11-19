@@ -133,6 +133,7 @@ alignAndBackfillTS = alignAndBackfillTSIndex []
 data TS a = TS [UTCTime] [a]
 
 createTSRaw :: (Eq a, Num a) => [UTCTime] -> [a] -> TS a
+createTSRaw [] [] = TS [] []
 createTSRaw times values = TS abtimes abvalues
     where 
         ab = alignAndBackfillTS (zip times values)
