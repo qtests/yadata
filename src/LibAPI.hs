@@ -80,17 +80,17 @@ downloadH2Graph [fileName, numberString] = do
 
 downloadH2File :: [String] -> IO ()
 downloadH2File tickers = do
-    let allData = do
-            let startXTS = createXTSRaw [] [] []
-            let tk = tickers !! 0
-
-
+    let allData [] accum = return accum
+        allData (tk:rest) accum = do
             ts <- priceTimeSeries tk
-            let allD = combineXTSnTS startXTS tk (createTSEither ts) 
-
-            
-            return $ allD
+            let allD = combineXTSnTS accum tk (createTSEither ts) 
+            if (rest == []) then return allD
+                            else allData rest allD
+    let result = allData tickers (createXTSRaw [] [] [])
+    do 
+        a <- result
+        print a
+        return a
     return ()
-       
-           
--- downloadH2File ["IBM", "MSFT", "APPL" ]
+          
+-- downloadH2File ["IBM", "MSFT", "AAPL", "KO" ]
