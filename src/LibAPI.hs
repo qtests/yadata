@@ -74,8 +74,23 @@ downloadH2Graph [fileName, numberString] = do
                 createProcess (shell $ "firefox " ++ plotFileName)
                 return () 
 
+-- https://stackoverflow.com/questions/17719620/while-loop-in-haskell-with-a-condition
+-- http://www.programming-idioms.org/idiom/78/do-while-loop/979/haskell
+-- https://stackoverflow.com/questions/27857541/abstraction-for-monadic-recursion-with-unless
 
 downloadH2File :: [String] -> IO ()
-downloadH2File tickers = undefined
+downloadH2File tickers = do
+    let allData = do
+            let startXTS = createXTSRaw [] [] []
+            let tk = tickers !! 0
 
 
+            ts <- priceTimeSeries tk
+            let allD = combineXTSnTS startXTS tk (createTSEither ts) 
+
+            
+            return $ allD
+    return ()
+       
+           
+-- downloadH2File ["IBM", "MSFT", "APPL" ]

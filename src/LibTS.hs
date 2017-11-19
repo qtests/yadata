@@ -200,6 +200,7 @@ type ColNameXTS = String
 data XTS a = XTS [UTCTime] [ColXTS a] [ColNameXTS]
 
 createXTSRaw :: (Eq a, Num a) => [UTCTime] -> [ColXTS a] -> [ColNameXTS] -> XTS a
+createXTSRaw [] [] [] = XTS [] [] []
 createXTSRaw times values colnames = XTS abtimes abvalues colnames
    where
       abtimes = filter isAWorkingDay $ getDateTimeInterval times
@@ -236,6 +237,7 @@ preparePrinting dta sep = foldl (\x y -> x ++ sep ++ y ) "" dta
 
 
 instance Show a => Show (XTS a) where
+    show (XTS [] [] []) = "\n"
     show (XTS times values colNames) = mconcat rows
       where rows = ["Date " ++ preparePrinting colNames " | " ++ "\n"] ++ 
                     zipWith (\x y -> mconcat [show x, preparePrinting y " | ", "\n"] ) 
