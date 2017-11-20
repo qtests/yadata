@@ -19,12 +19,16 @@ module LibTS
     combineTS,
     indexTS,
     dataTS,
+    meanTS,
+    diffTS,
+    movingAverageTS,
     XTS(..),
     createXTSRaw,
     writeFileXTS,
     readFileXTS,
     convertTS2XTS,
     combineXTSnTS,
+    combineXTSnXTS,
     indexXTS,
     dataXTS
 ) where
@@ -177,22 +181,25 @@ readFileTS path = do
     return $ TS date value
 
 
-combineTS :: TS a -> TS a -> TS a
+combineTS :: (Eq a, Num a) => TS a -> TS a -> TS a
 combineTS (TS [] []) ts2 = ts2
 combineTS ts1 (TS [] []) = ts1
-combineTS (TS t1 v1) (TS t2 v2) = undefined -- TS completeTimes combinedValues
---    where bothTimes = mconcat [t1,t2]
---          completeTimes = [minimum bothTimes .. maximum bothTimes]
---          tvMap = foldl insertMaybePair Map.empty (zip t1 v1)
---          updatedMap = foldl insertMaybePair tvMap (zip t2 v2)
---          combinedValues = map (\v -> Map.lookup v updatedMap) completeTimes
+combineTS (TS t1 v1) (TS t2 v2) = TS tx vx
+    where 
+        tx = filter isAWorkingDay $ getDateTimeInterval $ mconcat [t1,t2]
+        tvMap = foldl (\mm (key, value) -> Map.insert key value mm) Map.empty $ zip t1 v1
+        tv2Map = foldl (\mm (key, value) -> Map.insert key value mm) tvMap $ zip t2 v2
+        allValues = fmap (\v -> Map.lookup v tv2Map) tx 
+        allValuesB = if any (==Nothing) allValues then backFillTS' allValues else allValues
+        allValuesB' = if any (== Nothing) allValuesB then reverse (backFillTS' $ reverse allValuesB ) else allValuesB
+        vx = if all (==Nothing) allValuesB' then [] else catMaybes allValuesB'
 
 
-instance Semigroup (TS a) where
+instance (Eq a, Num a) => Semigroup (TS a) where
    (<>) = combineTS
 
 
-instance Monoid (TS a) where
+instance (Eq a, Num a) => Monoid (TS a) where
    mempty = TS [] []
    mappend = (<>)
 
@@ -205,6 +212,38 @@ indexTS ( TS ind _ ) = ind
 -- Get the data
 dataTS :: (Eq a, Num a) => TS a -> [a]
 dataTS ( TS _ dta ) = dta
+
+-- Mean
+mean :: (Real a) => [a] -> Double
+mean xs = total/count
+    where total = (realToFrac . sum) xs
+          count = (realToFrac . length) xs
+
+meanTS :: (Real a) => TS a -> Maybe Double
+meanTS (TS _ []) = Nothing
+meanTS (TS _ values) = Just $ mean values
+
+-- diff
+diffTS :: Num a => TS a -> TS a
+diffTS (TS [] []) = TS [] []
+diffTS (TS times values) = TS times ((head diffValues):diffValues)
+    where shiftValues = tail values
+          diffValues = zipWith (\x y -> x - y) shiftValues values
+
+-- Moving Average
+movingAvg :: (Real a) => [a] -> Int -> [Double]
+movingAvg [] n = []
+movingAvg vals n = if (length nextVals) == n
+                   then (mean nextVals):(movingAvg restVals n)
+                   else []
+    where nextVals = take n vals
+          restVals = tail vals
+
+movingAverageTS :: (Real a) => TS a -> Int -> TS Double
+movingAverageTS (TS [] []) _ = TS [] []
+movingAverageTS (TS times values) n = TS times (padding ++ ma)
+    where ma = movingAvg values n
+          padding = fmap realToFrac $ take (n-1) values
 
 -- a <- readFileXTS "labas.csv"
 -- ts <- priceTimeSeries "IBM"
@@ -287,6 +326,19 @@ combineXTSnTS (XTS xindex xdata xcolNames) colName (TS index value) = fts
         fts = case ats of
                 Left _    -> XTS xindex xdata xcolNames 
                 Right ts  -> XTS xindex (xdata ++ [ snd $ unzip ts ]) (xcolNames ++ [colName])
+
+
+combineXTSnXTS :: (Eq a, Num a) => XTS a -> XTS a -> XTS a 
+combineXTSnXTS  x1 x2 = undefined
+
+
+instance (Eq a, Num a) => Semigroup (XTS a) where
+    (<>) = combineXTSnXTS
+
+
+instance (Eq a, Num a) => Monoid (XTS a) where
+    mempty = XTS [] [] []
+    mappend = (<>)
 
 
 -- Get the index
