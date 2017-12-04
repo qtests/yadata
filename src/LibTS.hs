@@ -19,6 +19,7 @@ module LibTS
     combineTS,
     indexTS,
     dataTS,
+    takeTS,
     meanTS,
     diffTS,
     movingAverageTS,
@@ -30,7 +31,9 @@ module LibTS
     combineXTSnTS,
     combineXTSnXTS,
     indexXTS,
-    dataXTS
+    dataXTS,
+    takeXTS,
+    movingAverageXTS
 ) where
 
 import Data.Time
@@ -213,6 +216,14 @@ indexTS ( TS ind _ ) = ind
 dataTS :: (Eq a, Num a) => TS a -> [a]
 dataTS ( TS _ dta ) = dta
 
+
+takeTS :: Num a => Int -> TS a -> TS a
+takeTS 0 ts = ts
+takeTS _ ts@(TS [] []) = ts
+takeTS n (TS x y) = TS (take n x) (take n y)
+
+-- Calculations -------------------------------------------------------------------------------------------
+
 -- Mean
 mean :: (Real a) => [a] -> Double
 mean xs = total/count
@@ -231,10 +242,10 @@ diffTS (TS times values) = TS times ((head diffValues):diffValues)
           diffValues = zipWith (\x y -> x - y) shiftValues values
 
 -- Moving Average
-movingAvg :: (Real a) => [a] -> Int -> [Double]
-movingAvg [] n = []
-movingAvg vals n = if (length nextVals) == n
-                   then (mean nextVals):(movingAvg restVals n)
+movingAvg :: (Real a) => Int -> [a]  -> [Double]
+movingAvg n []  = []
+movingAvg n vals = if (length nextVals) == n
+                   then (mean nextVals):(movingAvg n restVals)
                    else []
     where nextVals = take n vals
           restVals = tail vals
@@ -242,7 +253,7 @@ movingAvg vals n = if (length nextVals) == n
 movingAverageTS :: (Real a) => TS a -> Int -> TS Double
 movingAverageTS (TS [] []) _ = TS [] []
 movingAverageTS (TS times values) n = TS times (padding ++ ma)
-    where ma = movingAvg values n
+    where ma = movingAvg n values 
           padding = fmap realToFrac $ take (n-1) values
 
 -- a <- readFileXTS "labas.csv"
@@ -308,7 +319,7 @@ writeFileXTS path (XTS times values colNames) =
     writeFile path tsString
     where
         -- formatTime defaultTimeLocale "%F %T (%Z)" x
-        tsString = mconcat $ ["Date " ++ preparePrinting colNames "," ++ "\n"] ++  
+        tsString = mconcat $ ["Date" ++ preparePrinting colNames "," ++ "\n"] ++  
                     zipWith (\x y -> mconcat [show x, preparePrinting y ",", "\n"] ) 
                                         times ((fmap . fmap) show $ transpose values)
 
@@ -327,9 +338,9 @@ combineXTSnTS (XTS xindex xdata xcolNames) colName (TS index value) = fts
                 Left _    -> XTS xindex xdata xcolNames 
                 Right ts  -> XTS xindex (xdata ++ [ snd $ unzip ts ]) (xcolNames ++ [colName])
 
-
+-- To be done ...
 combineXTSnXTS :: (Eq a, Num a) => XTS a -> XTS a -> XTS a 
-combineXTSnXTS  x1 x2 = undefined
+combineXTSnXTS  (XTS xindex xdata xcolNames) (XTS yindex ydata ycolNames) = undefined
 
 
 instance (Eq a, Num a) => Semigroup (XTS a) where
@@ -345,7 +356,21 @@ instance (Eq a, Num a) => Monoid (XTS a) where
 indexXTS :: XTS a -> [UTCTime]
 indexXTS ( XTS ind _ _ ) = ind
 
+
 -- Get the data
 dataXTS :: Num a => XTS a -> ([ColXTS a], [String])
 dataXTS ( XTS _ dta cnames  ) = (dta, cnames)
 
+
+takeXTS :: Num a => Int -> XTS a -> XTS a
+takeXTS 0 ts = ts
+takeXTS _ ts@(XTS [] [] []) = ts
+takeXTS n (XTS x y z) = XTS (take n x) (fmap (take n) y) z
+
+
+movingAverageXTS :: (Real a) => Int -> XTS a ->  XTS Double
+movingAverageXTS _ (XTS [] [] [])  = XTS [] [] []
+movingAverageXTS n (XTS xindex xdata xcolNames) = XTS xindex result xcolNames
+    where ma = (fmap (movingAvg n) xdata) 
+          padding = (fmap . fmap) realToFrac $ fmap (take (n-1)) xdata
+          result = transpose $ (transpose padding) ++ (transpose ma)

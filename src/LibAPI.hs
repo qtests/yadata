@@ -5,7 +5,8 @@ module LibAPI
     viewTL,
     downloadH2Graph,
     priceTimeSeries,
-    downloadH2File
+    downloadH2File,
+    movAvg
 ) where
 
 import LibYahoo
@@ -77,19 +78,35 @@ downloadH2Graph [fileName, numberString] = do
 -- https://stackoverflow.com/questions/17719620/while-loop-in-haskell-with-a-condition
 -- https://stackoverflow.com/questions/27857541/abstraction-for-monadic-recursion-  -unless
 
+-- Download data: a helper function
+downData :: [String] -> XTS Double -> IO (XTS Double)
+downData [] accum = return accum
+downData (tk:rest) accum = do
+    ts <- priceTimeSeries tk
+    ts <- if (isLeft ts || (fmap length ts) == Right 0) 
+                then priceTimeSeries tk
+                else return ts
+    let allD = combineXTSnTS accum tk (createTSEither ts) 
+    if (rest == []) then return allD
+                    else downData rest allD
+
 downloadH2File :: [String] -> IO ()
 downloadH2File tickers = do
-    let allData [] accum = return accum
-        allData (tk:rest) accum = do
-            ts <- priceTimeSeries tk
-            let allD = combineXTSnTS accum tk (createTSEither ts) 
-            if (rest == []) then return allD
-                            else allData rest allD
-    let result = allData tickers (createXTSRaw [] [] [])
-    do 
-        a <- result
-        print a
-        return a
+    print tickers
+    result <- downData tickers (createXTSRaw [] [] [])
+    writeFileXTS "testFile_hd.csv" result
     return ()
           
 -- downloadH2File ["IBM", "MSFT", "AAPL", "KO" ]
+
+movAvg :: [String] -> IO ()
+movAvg inInfo = do
+    print inInfo
+    xts <- downData inInfo (createXTSRaw [] [] [])
+    print $ takeXTS 2 xts
+    let result = movingAverageXTS 10 xts
+    writeFileXTS "testFile_ma.csv" result
+    return ()
+
+-- stack exec yadata-exe ma "IBM" "MSFT" "AAPL" "KO"
+    
