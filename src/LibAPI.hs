@@ -58,15 +58,16 @@ viewTL [fileName] = do
     putStr $ unlines numberedTasks
 
 downloadH2Graph :: [String] -> IO ()
-downloadH2Graph [fileName, numberString] = do
-    contents <- readFile fileName
-    let number = read numberString :: Int
-    let ticker_line = (lines contents ) !! number 
-    let ticker_csv = parseCSV "Ticker" ticker_line
-    case ticker_csv of
-        Left _ -> return ()
-        Right ticker -> do
-                let tk = (concat ticker) !! 0
+downloadH2Graph tickers = do
+    -- contents <- readFile fileName
+    -- let number = read numberString :: Int
+    -- let ticker_line = (lines contents ) !! number 
+    -- let ticker_csv = parseCSV "Ticker" ticker_line
+    -- case ticker_csv of
+    --     Left _ -> return ()
+    --     Right ticker -> do
+                -- let tk = (concat ticker) !! 0
+                let tk = tickers !! 0
                 ts <- priceTimeSeries tk 
                 -- Plot
                 let plotFileName = "plot-series.svg"
@@ -93,8 +94,9 @@ downData (tk:rest) accum = do
 downloadH2File :: [String] -> IO ()
 downloadH2File tickers = do
     print tickers
-    result <- downData tickers (createXTSRaw [] [] [])
-    writeFileXTS "testFile_hd.csv" result
+    xts <- downData tickers (createXTSRaw [] [] [])
+    print $ takeXTS 2 xts
+    writeFileXTS "testFile_hd.csv" xts
     return ()
           
 -- downloadH2File ["IBM", "MSFT", "AAPL", "KO" ]
