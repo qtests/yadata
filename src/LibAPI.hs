@@ -6,7 +6,8 @@ module LibAPI
     downloadH2Graph,
     priceTimeSeries,
     downloadH2File,
-    movAvg
+    movAvg,
+    movAvgStrategy
 ) where
 
 import LibYahoo
@@ -77,7 +78,7 @@ downloadH2Graph tickers = do
                 return () 
 
 -- https://stackoverflow.com/questions/17719620/while-loop-in-haskell-with-a-condition
--- https://stackoverflow.com/questions/27857541/abstraction-for-monadic-recursion-  -unless
+-- https://stackoverflow.com/questions/27857541/abstraction-for-monadic-recursion-with-unless
 
 -- Download data: a helper function
 downData :: [String] -> XTS Double -> IO (XTS Double)
@@ -110,5 +111,31 @@ movAvg inInfo = do
     writeFileXTS "testFile_ma.csv" result
     return ()
 
--- stack exec yadata-exe ma "IBM" "MSFT" "AAPL" "KO"
+-- stack exec yadata-exe mva "IBM" "MSFT" "AAPL" "KO"
+
+movAvgStrategy :: [String] -> IO ()
+movAvgStrategy inInfo = do
+    print inInfo
+
+    -- Data
+    xts <- downData inInfo (createXTSRaw [] [] [])
+    print $ takeXTS 2 xts
+    let (XTS index prices conames) = xts
+
+    -- Signal
+    let maLong = movingAverageXTS 250 xts
+    let maShort = movingAverageXTS 20 xts
+    let s1 = (zipWith . zipWith) (>) prices (fst $ dataXTS maLong)
+    let s2 = (zipWith . zipWith) (>) prices (fst $ dataXTS maShort)
+    let sig = (fmap . fmap) (\x -> if x then 1.0 else 0.0) $ 
+                                                 (zipWith . zipWith) (&&) s2 s1
     
+    -- Performance
+    let (XTS _ diffx _)  = logdiffXTS xts
+    let perf =  fmap (scanl1 (+)) $ (zipWith . zipWith) (*) diffx sig
+
+    -- Out
+    writeFileXTS "testFile_strat_weights.csv" $ XTS index sig conames
+    writeFileXTS "testFile_strat_perform.csv" $ XTS index perf conames
+    
+    return ()

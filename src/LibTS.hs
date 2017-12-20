@@ -33,6 +33,8 @@ module LibTS
     indexXTS,
     dataXTS,
     takeXTS,
+    diffXTS,
+    logdiffXTS,
     movingAverageXTS
 ) where
 
@@ -209,7 +211,7 @@ instance (Eq a, Num a) => Monoid (TS a) where
 
 -- Get the index
 indexTS :: TS a -> [UTCTime]
-indexTS ( TS ind _ ) = ind
+indexTS (TS ind _) = ind
 
 
 -- Get the data
@@ -237,7 +239,7 @@ meanTS (TS _ values) = Just $ mean values
 -- diff
 diffTS :: Num a => TS a -> TS a
 diffTS (TS [] []) = TS [] []
-diffTS (TS times values) = TS times ((head diffValues):diffValues)
+diffTS (TS times values) = TS times (0:diffValues)
     where shiftValues = tail values
           diffValues = zipWith (\x y -> x - y) shiftValues values
 
@@ -354,18 +356,33 @@ instance (Eq a, Num a) => Monoid (XTS a) where
 
 -- Get the index
 indexXTS :: XTS a -> [UTCTime]
-indexXTS ( XTS ind _ _ ) = ind
+indexXTS (XTS ind _ _) = ind
 
 
 -- Get the data
 dataXTS :: Num a => XTS a -> ([ColXTS a], [String])
-dataXTS ( XTS _ dta cnames  ) = (dta, cnames)
+dataXTS (XTS _ dta cnames) = (dta, cnames)
 
 
 takeXTS :: Num a => Int -> XTS a -> XTS a
 takeXTS 0 ts = ts
 takeXTS _ ts@(XTS [] [] []) = ts
 takeXTS n (XTS x y z) = XTS (take n x) (fmap (take n) y) z
+
+
+-- diff
+diffXTS :: (Num a) => XTS a -> XTS a
+diffXTS (XTS [] [] []) = XTS [] [] []
+diffXTS (XTS times values colNames) = XTS times (diffValues) colNames
+     where shiftValues = fmap tail values
+           diffValues_ = (zipWith . zipWith) (\x y -> x - y) shiftValues values
+           diffValues  = transpose $ [take (length values) $ repeat 0] ++ 
+                                                        (transpose diffValues_)
+
+logdiffXTS :: (Num a, Floating a) => XTS a -> XTS a
+logdiffXTS (XTS [] [] []) = XTS [] [] []
+logdiffXTS (XTS times values colNames) = diffXTS $ 
+    XTS times ((fmap . fmap) log values) colNames
 
 
 movingAverageXTS :: (Real a) => Int -> XTS a ->  XTS Double
