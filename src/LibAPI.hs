@@ -120,7 +120,7 @@ movAvgStrategy inInfo = do
     -- Data
     xts <- downData inInfo (createXTSRaw [] [] [])
     print $ takeXTS 2 xts
-    let (XTS index prices conames) = xts
+    let (XTS indx prices conames) = xts
 
     -- Signal
     let maLong = movingAverageXTS 250 xts
@@ -135,7 +135,7 @@ movAvgStrategy inInfo = do
     let perf =  fmap (scanl1 (+)) $ (zipWith . zipWith) (*) diffx sig
 
     -- Out
-    writeFileXTS "testFile_strat_weights.csv" $ XTS index sig conames
-    writeFileXTS "testFile_strat_perform.csv" $ XTS index perf conames
+    writeFileXTS "testFile_strat_weights.csv" $ XTS indx sig conames
+    writeFileXTS "testFile_strat_perform.csv" $ XTS indx perf conames
     
     return ()
