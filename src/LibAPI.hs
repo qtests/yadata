@@ -7,8 +7,7 @@ module LibAPI
     priceTimeSeries,
     downloadH2File,
     movAvg,
-    movAvgStrategy,
-    plotXTS
+    movAvgStrategy
 ) where
 
 import LibYahoo
@@ -32,6 +31,7 @@ import Graphics.Rendering.Chart.Backend.Diagrams
 -- import system process
 import System.Process
 
+import Control.Monad
 
 -- #############################################################################
 
@@ -93,6 +93,7 @@ downData (tk:rest) accum = do
     if (rest == []) then return allD
                     else downData rest allD
 
+
 downloadH2File :: [String] -> IO ()
 downloadH2File tickers = do
     print tickers
@@ -152,10 +153,6 @@ plotXTS plotFileName (XTS xindex xdata xcolNames) = do
     let xin = fmap (utcToLocalTime utc) xindex
     let prepData = fmap (\x-> zip xin x ) xdata
     toFile def plotFileName $ do
-        plot (line (xcolNames !! 0) [ prepData !! 0])
-        plot (line (xcolNames !! 1) [ prepData !! 1])
-        plot (line (xcolNames !! 2) [ prepData !! 2])
-        plot (line (xcolNames !! 3) [ prepData !! 3])
-    
-    -- createProcess (shell $ "firefox " ++ plotFileName)
+        forM_ (zip xcolNames prepData) $ \(cname, dta) -> do
+            plot (line cname [ dta ])
     return () 
