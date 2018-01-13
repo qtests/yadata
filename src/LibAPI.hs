@@ -7,7 +7,8 @@ module LibAPI
     priceTimeSeries,
     downloadH2File,
     movAvg,
-    movAvgStrategy
+    movAvgStrategy,
+    plotXTS
 ) where
 
 import LibYahoo
@@ -137,5 +138,24 @@ movAvgStrategy inInfo = do
     -- Out
     writeFileXTS "testFile_strat_weights.csv" $ XTS indx sig conames
     writeFileXTS "testFile_strat_perform.csv" $ XTS indx perf conames
+    plotXTS      "testFile_strat_plot.svg"    $ XTS indx perf conames
     
+    -- launch firefox
+    createProcess (shell $ "firefox testFile_strat_plot.svg")
+
     return ()
+
+--    stack exec yadata-exe maStrat IBM MSFT AAPL KO
+
+plotXTS :: (Num a, PlotValue a)=> String -> XTS a -> IO ()
+plotXTS plotFileName (XTS xindex xdata xcolNames) = do
+    let xin = fmap (utcToLocalTime utc) xindex
+    let prepData = fmap (\x-> zip xin x ) xdata
+    toFile def plotFileName $ do
+        plot (line (xcolNames !! 0) [ prepData !! 0])
+        plot (line (xcolNames !! 1) [ prepData !! 1])
+        plot (line (xcolNames !! 2) [ prepData !! 2])
+        plot (line (xcolNames !! 3) [ prepData !! 3])
+    
+    -- createProcess (shell $ "firefox " ++ plotFileName)
+    return () 
