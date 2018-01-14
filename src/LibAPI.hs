@@ -139,7 +139,7 @@ movAvgStrategy inInfo = do
     -- Out
     writeFileXTS "testFile_strat_weights.csv" $ XTS indx sig conames
     writeFileXTS "testFile_strat_perform.csv" $ XTS indx perf conames
-    plotXTS      "testFile_strat_plot.svg"    $ XTS indx perf conames
+    plotXTS      "testFile_strat_plot.svg"    $ takeXTS 5 $ XTS indx perf conames
     
     -- launch firefox
     createProcess (shell $ "firefox testFile_strat_plot.svg")
