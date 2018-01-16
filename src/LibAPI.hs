@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module LibAPI
-( 
+(
     viewTL,
     downloadH2Graph,
     priceTimeSeries,
@@ -10,25 +10,27 @@ module LibAPI
     movAvgStrategy
 ) where
 
-import LibYahoo
 import LibCSV
 import LibTS
+import LibYahoo
 
 -- import CSV related functions
-import Text.CSV
-import qualified Data.ByteString.Lazy.UTF8 as DBLU
 import qualified Data.ByteString.Lazy.Char8 as C
+import qualified Data.ByteString.Lazy.UTF8 as DBLU
+import Text.CSV
 
 -- import other
-import Data.Time
-import Data.Either
 import Control.Arrow (first)
+import Data.Either
+import Data.Time
 
 -- import graphiccs
-import Graphics.Rendering.Chart.Easy
 import Graphics.Rendering.Chart.Backend.Diagrams
+import Graphics.Rendering.Chart.Easy
 
 -- import system process
+import Control.Exception as E
+import System.IO (FilePath)
 import System.Process
 
 import Control.Monad
@@ -39,7 +41,7 @@ preparePrices :: Num b => Either String [(UTCTime, b)] -> [(LocalTime, b)]
 preparePrices x = map (first (utcToLocalTime utc)) (concat $ rights [x])
 
 priceTimeSeries :: String -> IO (Either String [(UTCTime, Double)] )
-priceTimeSeries ticker = do 
+priceTimeSeries ticker = do
    ydata <- getYahooData ticker :: IO (Either YahooException C.ByteString)
    let ycsv = either (\_ -> Left YStatusCodeException) id
                (mapM (\x -> parseCSV "Ticker" (DBLU.toString x )) ydata)
@@ -52,31 +54,31 @@ priceTimeSeries ticker = do
 -- API
 ---------------------------------------------
 
-viewTL :: [String] -> IO ()  
-viewTL [fileName] = do  
-    contents <- readFile fileName  
-    let tickers = lines contents  
-        numberedTasks = zipWith (\n linex -> show n ++ " - " ++ linex) [0..] tickers  
+viewTL :: [String] -> IO ()
+viewTL [fileName] = do
+    contents <- readFile fileName
+    let tickers = lines contents
+        numberedTasks = zipWith (\n linex -> show n ++ " - " ++ linex) [0..] tickers
     putStr $ unlines numberedTasks
 
 downloadH2Graph :: [String] -> IO ()
 downloadH2Graph tickers = do
     -- contents <- readFile fileName
     -- let number = read numberString :: Int
-    -- let ticker_line = (lines contents ) !! number 
+    -- let ticker_line = (lines contents ) !! number
     -- let ticker_csv = parseCSV "Ticker" ticker_line
     -- case ticker_csv of
     --     Left _ -> return ()
     --     Right ticker -> do
                 -- let tk = (concat ticker) !! 0
                 let tk = tickers !! 0
-                ts <- priceTimeSeries tk 
+                ts <- priceTimeSeries tk
                 -- Plot
                 let plotFileName = "plot-series.svg"
                 toFile def plotFileName $ plot (line "" [preparePrices ts])
                 putStrLn $ tk ++ " plot saved to: " ++ plotFileName
                 createProcess (shell $ "firefox " ++ plotFileName)
-                return () 
+                return ()
 
 -- https://stackoverflow.com/questions/17719620/while-loop-in-haskell-with-a-condition
 -- https://stackoverflow.com/questions/27857541/abstraction-for-monadic-recursion-with-unless
@@ -86,10 +88,10 @@ downData :: [String] -> XTS Double -> IO (XTS Double)
 downData [] accum = return accum
 downData (tk:rest) accum = do
     ts <- priceTimeSeries tk
-    ts <- if (isLeft ts || (fmap length ts) == Right 0) 
+    ts <- if (isLeft ts || (fmap length ts) == Right 0)
                 then priceTimeSeries tk
                 else return ts
-    let allD = combineXTSnTS accum tk (createTSEither ts) 
+    let allD = combineXTSnTS accum tk (createTSEither ts)
     if (rest == []) then return allD
                     else downData rest allD
 
@@ -101,7 +103,7 @@ downloadH2File tickers = do
     print $ takeXTS 2 xts
     writeFileXTS "testFile_hd.csv" xts
     return ()
-          
+
 -- downloadH2File ["IBM", "MSFT", "AAPL", "KO" ]
 
 movAvg :: [String] -> IO ()
@@ -129,9 +131,9 @@ movAvgStrategy inInfo = do
     let maShort = movingAverageXTS 20 xts
     let s1 = (zipWith . zipWith) (>) prices (fst $ dataXTS maLong)
     let s2 = (zipWith . zipWith) (>) prices (fst $ dataXTS maShort)
-    let sig = (fmap . fmap) (\x -> if x then 1.0 else 0.0) $ 
+    let sig = (fmap . fmap) (\x -> if x then 1.0 else 0.0) $
                                                  (zipWith . zipWith) (&&) s2 s1
-    
+
     -- Performance
     let (XTS _ diffx _)  = logdiffXTS xts
     let perf =  fmap (scanl1 (+)) $ (zipWith . zipWith) (*) diffx sig
@@ -140,11 +142,12 @@ movAvgStrategy inInfo = do
     writeFileXTS "testFile_strat_weights.csv" $ XTS indx sig conames
     writeFileXTS "testFile_strat_perform.csv" $ XTS indx perf conames
     plotXTS      "testFile_strat_plot.svg"    $ takeXTS 5 $ XTS indx perf conames
-    
+
     -- launch firefox
-    createProcess (shell $ "firefox testFile_strat_plot.svg")
+    -- createProcess (shell $ "firefox testFile_strat_plot.svg")
 
     return ()
+
 
 --    stack exec yadata-exe maStrat IBM MSFT AAPL KO
 
@@ -155,4 +158,21 @@ plotXTS plotFileName (XTS xindex xdata xcolNames) = do
     toFile def plotFileName $ do
         forM_ (zip xcolNames prepData) $ \(cname, dta) -> do
             plot (line cname [ dta ])
-    return () 
+    return ()
+
+-- | FilePath was testFile_strat_plot.svg
+createGraphForNewsletter :: [String] -> FilePath -> IO ()
+createGraphForNewsletter companyList filepath = do
+    xts <- downData companyList (createXTSRaw [] [] [])
+    let (XTS indx prices conames) = xts
+    let maLong = movingAverageXTS 250 xts
+    let maShort = movingAverageXTS 20 xts
+    let s1 = (zipWith . zipWith) (>) prices (fst $ dataXTS maLong)
+    let s2 = (zipWith . zipWith) (>) prices (fst $ dataXTS maShort)
+    let sig = (fmap . fmap) (\x -> if x then 1.0 else 0.0) $
+         (zipWith . zipWith) (&&) s2 s1
+    let (XTS _ diffx _)  = logdiffXTS xts
+    let perf =  fmap (scanl1 (+)) $ (zipWith . zipWith) (*) diffx sig
+    plotXTS filepath $ takeXTS 5 $ XTS indx perf conames
+
+    return ()
