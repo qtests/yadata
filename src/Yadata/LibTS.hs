@@ -33,6 +33,7 @@ module Yadata.LibTS
     indexXTS,
     dataXTS,
     takeXTS,
+    takeColXTS,
     diffXTS,
     logdiffXTS,
     movingAverageXTS
@@ -369,6 +370,11 @@ takeXTS 0 ts                = ts
 takeXTS _ ts@(XTS [] [] []) = ts
 takeXTS n (XTS x y z)       = XTS (take n x) (fmap (take n) y) z
 
+
+takeColXTS :: Num a => Int -> XTS a -> XTS a
+takeColXTS 0 ts                = XTS [] [] []
+takeColXTS _ ts@(XTS [] [] []) = ts
+takeColXTS n (XTS x y z)       = XTS x (take n y) (take n z)
 
 -- diff
 diffXTS :: (Num a) => XTS a -> XTS a

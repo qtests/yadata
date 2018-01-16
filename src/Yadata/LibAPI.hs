@@ -142,7 +142,7 @@ movAvgStrategy inInfo = do
     -- Out
     writeFileXTS "testFile_strat_weights.csv" $ XTS indx sig conames
     writeFileXTS "testFile_strat_perform.csv" $ XTS indx perf conames
-    plotXTS      "testFile_strat_plot.svg"    $ takeXTS 5 $ XTS indx perf conames
+    plotXTS      "testFile_strat_plot.svg"    $ takeColXTS 5 $ XTS indx perf conames
 
     -- launch firefox
     -- createProcess (shell $ "firefox testFile_strat_plot.svg")
@@ -174,6 +174,6 @@ createGraphForNewsletter companyList filepath = do
          (zipWith . zipWith) (&&) s2 s1
     let (XTS _ diffx _)  = logdiffXTS xts
     let perf =  fmap (scanl1 (+)) $ (zipWith . zipWith) (*) diffx sig
-    plotXTS filepath $ takeXTS 5 $ XTS indx perf conames
+    plotXTS filepath $ takeColXTS 5 $ XTS indx perf conames
 
     return ()
