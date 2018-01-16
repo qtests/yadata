@@ -7,7 +7,8 @@ module LibAPI
     priceTimeSeries,
     downloadH2File,
     movAvg,
-    movAvgStrategy
+    movAvgStrategy,
+    createGraphForNewsletter
 ) where
 
 import LibCSV
