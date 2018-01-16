@@ -3,8 +3,8 @@
 -- Time Series
 -- #############
 
-module LibTS
-( 
+module Yadata.LibTS
+(
     getDateTimeIntervalTS,
     isAWorkingDay,
     alignTS,
@@ -38,23 +38,23 @@ module LibTS
     movingAverageXTS
 ) where
 
-import Data.Time
-import Data.Time.Calendar.WeekDate
-import qualified Data.Map as Map
-import Data.List
-import Data.Maybe
-import Data.Either
-import Text.CSV
 import Control.Arrow (second)
 import Data.Char
-import Data.String
+import Data.Either
+import Data.List
+import qualified Data.Map as Map
+import Data.Maybe
 import Data.Semigroup
+import Data.String
+import Data.Time
+import Data.Time.Calendar.WeekDate
+import Text.CSV
 
-import LibCSV
+import Yadata.LibCSV
 -- ###########################################################################
 
 isAWorkingDay::UTCTime -> Bool
-isAWorkingDay x = 
+isAWorkingDay x =
     let myWeekDay = (toWeekDate . utctDay) x
         (_, _, aWeekDay) = myWeekDay
     in aWeekDay < 6
@@ -63,8 +63,8 @@ isAWorkingDay x =
 
 getDateTimeInterval :: [UTCTime] -> [UTCTime]
 getDateTimeInterval timeIndex =
-    if (length timeIndex == 0) 
-        then [] 
+    if (length timeIndex == 0)
+        then []
         else fmap (\x -> addUTCTime (24*60*60*( fromRational x)) mint) [0 .. interval]
                where
                    mint = minimum timeIndex
@@ -73,7 +73,7 @@ getDateTimeInterval timeIndex =
 
 
 getDateTimeIntervalTS' :: Num a => [(UTCTime, a)] -> [UTCTime]
-getDateTimeIntervalTS' tseries = 
+getDateTimeIntervalTS' tseries =
     getDateTimeInterval dates
     where
         (dates, _) = unzip tseries
@@ -88,23 +88,23 @@ getDateTimeIntervalTS tseries = do
 -- https://downloads.haskell.org/~ghc/6.12.2/docs/html/libraries/containers-0.3.0.0/Data-Map.html
 alignTS' :: Num a => [UTCTime] -> [(UTCTime, a)] -> [(UTCTime, Maybe a)]
 alignTS' [] [] = []
-alignTS' [] ts = alignTS' ( filter isAWorkingDay $ getDateTimeIntervalTS' ts) ts 
+alignTS' [] ts = alignTS' ( filter isAWorkingDay $ getDateTimeIntervalTS' ts) ts
 alignTS' _ [] = []
 alignTS' idx ts = zip idx' allValues
      where   tvMap = foldl (\mm (key, value) -> Map.insert key value mm) Map.empty ts
              idx' = sort idx
-             allValues = fmap (\v -> Map.lookup v tvMap) idx'                          
+             allValues = fmap (\v -> Map.lookup v tvMap) idx'
 
 
-alignTSIndex :: Num a => Either String [UTCTime] -> Either String [(UTCTime, a)] -> Either String [(UTCTime, Maybe a)]                    
-alignTSIndex idx ts = do 
+alignTSIndex :: Num a => Either String [UTCTime] -> Either String [(UTCTime, a)] -> Either String [(UTCTime, Maybe a)]
+alignTSIndex idx ts = do
     ind <- idx
     dta <- ts
     return $ alignTS' ind dta
 
 
-alignTS :: Num a => Either String [(UTCTime, a)] -> Either String [(UTCTime, Maybe a)]                    
-alignTS ts = do 
+alignTS :: Num a => Either String [(UTCTime, a)] -> Either String [(UTCTime, Maybe a)]
+alignTS ts = do
     dta <- ts
     return $ alignTS' [] dta
 
@@ -116,20 +116,20 @@ backFillTS' (x:y:[]) = if (isNothing y) then (x:x:[]) else  (x:y:[])
 backFillTS' (x:y:rest) = if (isJust x && isNothing y) then backFillTS' (x:x:rest) else  (x:( backFillTS' (y:rest) ))
 
 
-backFillTS :: Num a => Either String [(UTCTime, Maybe a)] -> Either String [(UTCTime, Maybe a)] 
-backFillTS ts = do 
+backFillTS :: Num a => Either String [(UTCTime, Maybe a)] -> Either String [(UTCTime, Maybe a)]
+backFillTS ts = do
     ts' <- ts
     let (tsIndex, values) = unzip ts'
     return $ zip tsIndex (backFillTS' values)
-    
+
 
 alignAndBackfillTSIndex :: (Eq a, Num a) => [UTCTime] -> [(UTCTime, a)] -> Either String [(UTCTime, a)]
 alignAndBackfillTSIndex index ts = do
     let (tsIndex, values) = unzip $ alignTS' index ts
     let valuesB = backFillTS' values
-    let values' = if any (== Nothing) valuesB 
+    let values' = if any (== Nothing) valuesB
                       then reverse (backFillTS' $ reverse valuesB ) else valuesB
-    if all (== Nothing) values' 
+    if all (== Nothing) values'
         then Left "No data!"
         else return $ zip tsIndex ( catMaybes values' )
 
@@ -145,16 +145,16 @@ data TS a = TS [UTCTime] [a]
 createTSRaw :: (Eq a, Num a) => [UTCTime] -> [a] -> TS a
 createTSRaw [] [] = TS [] []
 createTSRaw times values = TS abtimes abvalues
-    where 
+    where
         ab = alignAndBackfillTS (zip times values)
         (abtimes, abvalues) = if (isLeft ab || fmap length ab == Right 0) then ([], []) else unzip (concat $ rights [ab])
 
-        
+
 createTSEither :: (Eq a, Num a) => Either String [(UTCTime, a)]  -> TS a
 createTSEither ts = TS abtimes abvalues
     where
         ts1 = if (isLeft ts || fmap length ts == Right 0) then [] else (concat $ rights [ts])
-        ab = alignAndBackfillTS ts1 
+        ab = alignAndBackfillTS ts1
         (abtimes, abvalues) = if (isLeft ab ||fmap length ab == Right 0) then ([], []) else unzip (concat $ rights [ab])
 
 
@@ -176,12 +176,12 @@ readFileTS path = do
     let tstext = readFile path
     txt <- tstext
     let ptxt = parseCSV path txt
-    let date =  either 
-                (\_-> []) 
-                (\x-> fmap (read2UTCTime "%Y-%m-%d %H:%M:%S %Z") x) 
+    let date =  either
+                (\_-> [])
+                (\x-> fmap (read2UTCTime "%Y-%m-%d %H:%M:%S %Z") x)
                                           (getColumnInCSVEither ptxt "Date")
-    let value = either 
-                (\_-> []) 
+    let value = either
+                (\_-> [])
                 (\x-> fmap read2Double x) (getColumnInCSVEither ptxt "Value")
     return $ TS date value
 
@@ -190,11 +190,11 @@ combineTS :: (Eq a, Num a) => TS a -> TS a -> TS a
 combineTS (TS [] []) ts2 = ts2
 combineTS ts1 (TS [] []) = ts1
 combineTS (TS t1 v1) (TS t2 v2) = TS tx vx
-    where 
+    where
         tx = filter isAWorkingDay $ getDateTimeInterval $ mconcat [t1,t2]
         tvMap = foldl (\mm (key, value) -> Map.insert key value mm) Map.empty $ zip t1 v1
         tv2Map = foldl (\mm (key, value) -> Map.insert key value mm) tvMap $ zip t2 v2
-        allValues = fmap (\v -> Map.lookup v tv2Map) tx 
+        allValues = fmap (\v -> Map.lookup v tv2Map) tx
         allValuesB = if any (==Nothing) allValues then backFillTS' allValues else allValues
         allValuesB' = if any (== Nothing) allValuesB then reverse (backFillTS' $ reverse allValuesB ) else allValuesB
         vx = if all (==Nothing) allValuesB' then [] else catMaybes allValuesB'
@@ -220,9 +220,9 @@ dataTS ( TS _ dta ) = dta
 
 
 takeTS :: Num a => Int -> TS a -> TS a
-takeTS 0 ts = ts
+takeTS 0 ts            = ts
 takeTS _ ts@(TS [] []) = ts
-takeTS n (TS x y) = TS (take n x) (take n y)
+takeTS n (TS x y)      = TS (take n x) (take n y)
 
 -- Calculations -------------------------------------------------------------------------------------------
 
@@ -233,7 +233,7 @@ mean xs = total/count
           count = (realToFrac . length) xs
 
 meanTS :: (Real a) => TS a -> Maybe Double
-meanTS (TS _ []) = Nothing
+meanTS (TS _ [])     = Nothing
 meanTS (TS _ values) = Just $ mean values
 
 -- diff
@@ -255,7 +255,7 @@ movingAvg n vals = if (length nextVals) == n
 movingAverageTS :: (Real a) => TS a -> Int -> TS Double
 movingAverageTS (TS [] []) _ = TS [] []
 movingAverageTS (TS times values) n = TS times (padding ++ ma)
-    where ma = movingAvg n values 
+    where ma = movingAvg n values
           padding = fmap realToFrac $ take (n-1) values
 
 -- a <- readFileXTS "labas.csv"
@@ -277,16 +277,16 @@ createXTSRaw times values colnames = XTS abtimes abvalues colnames
    where
       abtimes = filter isAWorkingDay $ getDateTimeInterval times
       abvalues = fmap (\x-> let ab = alignAndBackfillTSIndex abtimes (zip times x)
-                                (_, xvalues) = 
-                                      if (isLeft ab || fmap length ab == Right 0) 
-                                      then ([], []) 
+                                (_, xvalues) =
+                                      if (isLeft ab || fmap length ab == Right 0)
+                                      then ([], [])
                                       else unzip (concat $ rights [ab])
                             in xvalues
                       ) values
 
 
 readFileXTS :: FilePath -> IO (XTS Double)
-readFileXTS path = do 
+readFileXTS path = do
     let tstext = readFile path
     txt <- tstext
     let ptxt = parseCSV path txt
@@ -296,8 +296,8 @@ readFileXTS path = do
             -- -----------------------------------------------------------------------------------------
             -- Add aligning !!! Add aligning !!! Add aligning !!! Add aligning !!! Add aligning !!! ----
             -- -----------------------------------------------------------------------------------------
-            let dates = either 
-                        (\_ -> []) 
+            let dates = either
+                        (\_ -> [])
                         (\x -> fmap (read2UTCTime "%Y-%m-%d %H:%M:%S %Z") x ) $ getColumnInCSV dta "Date"
             let restD = (fmap . fmap ) read2Double $ transpose $ delColumnInCSV dta "Date"
             let colnames = if (length dta == 0) then [] else filter (/= "Date") $ head dta
@@ -311,8 +311,8 @@ preparePrinting dta sep = foldl (\x y -> x ++ sep ++ y ) "" dta
 instance Show a => Show (XTS a) where
     show (XTS [] [] []) = "\n"
     show (XTS times values colNames) = mconcat rows
-      where rows = ["Date " ++ preparePrinting colNames " | " ++ "\n"] ++ 
-                    zipWith (\x y -> mconcat [show x, preparePrinting y " | ", "\n"] ) 
+      where rows = ["Date " ++ preparePrinting colNames " | " ++ "\n"] ++
+                    zipWith (\x y -> mconcat [show x, preparePrinting y " | ", "\n"] )
                                         times ((fmap . fmap) show $ transpose values)
 
 
@@ -321,8 +321,8 @@ writeFileXTS path (XTS times values colNames) =
     writeFile path tsString
     where
         -- formatTime defaultTimeLocale "%F %T (%Z)" x
-        tsString = mconcat $ ["Date" ++ preparePrinting colNames "," ++ "\n"] ++  
-                    zipWith (\x y -> mconcat [show x, preparePrinting y ",", "\n"] ) 
+        tsString = mconcat $ ["Date" ++ preparePrinting colNames "," ++ "\n"] ++
+                    zipWith (\x y -> mconcat [show x, preparePrinting y ",", "\n"] )
                                         times ((fmap . fmap) show $ transpose values)
 
 
@@ -337,11 +337,11 @@ combineXTSnTS (XTS xindex xdata xcolNames) colName (TS index value) = fts
     where
         ats = alignAndBackfillTSIndex xindex (zip index value)
         fts = case ats of
-                Left _    -> XTS xindex xdata xcolNames 
-                Right ts  -> XTS xindex (xdata ++ [ snd $ unzip ts ]) (xcolNames ++ [colName])
+                Left _   -> XTS xindex xdata xcolNames
+                Right ts -> XTS xindex (xdata ++ [ snd $ unzip ts ]) (xcolNames ++ [colName])
 
 -- To be done ...
-combineXTSnXTS :: (Eq a, Num a) => XTS a -> XTS a -> XTS a 
+combineXTSnXTS :: (Eq a, Num a) => XTS a -> XTS a -> XTS a
 combineXTSnXTS  (XTS xindex xdata xcolNames) (XTS yindex ydata ycolNames) = undefined
 
 
@@ -365,9 +365,9 @@ dataXTS (XTS _ dta cnames) = (dta, cnames)
 
 
 takeXTS :: Num a => Int -> XTS a -> XTS a
-takeXTS 0 ts = ts
+takeXTS 0 ts                = ts
 takeXTS _ ts@(XTS [] [] []) = ts
-takeXTS n (XTS x y z) = XTS (take n x) (fmap (take n) y) z
+takeXTS n (XTS x y z)       = XTS (take n x) (fmap (take n) y) z
 
 
 -- diff
@@ -376,18 +376,18 @@ diffXTS (XTS [] [] []) = XTS [] [] []
 diffXTS (XTS times values colNames) = XTS times (diffValues) colNames
      where shiftValues = fmap tail values
            diffValues_ = (zipWith . zipWith) (\x y -> x - y) shiftValues values
-           diffValues  = transpose $ [take (length values) $ repeat 0] ++ 
+           diffValues  = transpose $ [take (length values) $ repeat 0] ++
                                                         (transpose diffValues_)
 
 logdiffXTS :: (Num a, Floating a) => XTS a -> XTS a
 logdiffXTS (XTS [] [] []) = XTS [] [] []
-logdiffXTS (XTS times values colNames) = diffXTS $ 
+logdiffXTS (XTS times values colNames) = diffXTS $
     XTS times ((fmap . fmap) log values) colNames
 
 
 movingAverageXTS :: (Real a) => Int -> XTS a ->  XTS Double
 movingAverageXTS _ (XTS [] [] [])  = XTS [] [] []
 movingAverageXTS n (XTS xindex xdata xcolNames) = XTS xindex result xcolNames
-    where ma = (fmap (movingAvg n) xdata) 
+    where ma = (fmap (movingAvg n) xdata)
           padding = (fmap . fmap) realToFrac $ fmap (take (n-1)) xdata
           result = transpose $ (transpose padding) ++ (transpose ma)

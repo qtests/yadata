@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RankNTypes        #-}
 
-module LibYahoo
+module Yadata.LibYahoo
   ( getYahooData
   , YahooException(..)
   ) where
@@ -9,8 +9,7 @@ module LibYahoo
 import Control.Exception as E
 import Control.Lens
 import Control.Monad.Except
-import qualified Data.ByteString.Lazy as B
-       (ByteString, drop, pack, take)
+import qualified Data.ByteString.Lazy as B (ByteString, drop, pack, take)
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Int
 import Data.Maybe (fromMaybe)
@@ -20,8 +19,7 @@ import Data.Typeable
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
 import Network.HTTP.Simple hiding (httpLbs)
-import qualified Network.Wreq as W
-       (responseBody, responseStatus, statusCode)
+import qualified Network.Wreq as W (responseBody, responseStatus, statusCode)
 import Text.Regex.PCRE
 
 crumbleLink :: String -> String
@@ -54,9 +52,9 @@ data YahooException
   deriving (Typeable)
 
 instance Show YahooException where
-  show YStatusCodeException = "Yadata :: data fetch exception!"
+  show YStatusCodeException    = "Yadata :: data fetch exception!"
   show YCookieCrumbleException = "Yadata :: cookie crumble exception!"
-  show YWrongTickerException = "Yadata :: wrong ticker passed in!"
+  show YWrongTickerException   = "Yadata :: wrong ticker passed in!"
 
 instance Exception YahooException
 

@@ -2,12 +2,12 @@ name:                yadata
 version:             0.1.0.0
 -- synopsis:
 -- description:
-homepage:            https://github.com/githubuser/yadata#readme
+homepage:            https://github.com/qtests/yadata#readme
 license:             BSD3
 license-file:        LICENSE
-author:              Author name here
+author:              Vidmantas Pleta
 maintainer:          example@example.com
-copyright:           2017 Author name here
+copyright:           2017 Vidmantas Pleta
 category:            Web
 build-type:          Simple
 extra-source-files:  README.md
@@ -15,10 +15,10 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     LibYahoo
-                     , LibCSV
-                     , LibAPI
-                     , LibTS
+  exposed-modules:     Yadata.LibYahoo
+                     , Yadata.LibCSV
+                     , Yadata.LibAPI
+                     , Yadata.LibTS
   build-depends:       base >= 4.7 && < 5
                      , wreq
                      , regex-pcre-builtin
@@ -56,7 +56,7 @@ executable yadata-exe
                      , utf8-string
                      , csv
                      , time
-                     
+
   default-language:    Haskell2010
 
 test-suite yadata-test
@@ -77,4 +77,4 @@ test-suite yadata-test
 
 source-repository head
   type:     git
-  location: https://github.com/githubuser/yadata
+  location: https://github.com/qtests/yadata

@@ -2,7 +2,7 @@
 
 module Main where
 
-import LibAPI
+import Yadata.LibAPI
 
 import System.Environment
 
@@ -10,8 +10,8 @@ import System.Environment
 -- https://stackoverflow.com/questions/44044263/yahoo-finance-historical-data-downloader-url-is-not-working
 -- https://stackoverflow.com/questions/1317399/getting-the-local-appdata-folder-in-haskell
 
-dispatch :: [(String, [String] -> IO ())]  
-dispatch =  [ ("view", viewTL), ("graph", downloadH2Graph), 
+dispatch :: [(String, [String] -> IO ())]
+dispatch =  [ ("view", viewTL), ("graph", downloadH2Graph),
               ("download", downloadH2File), ("mva", movAvg), ("maStrat", movAvgStrategy) ]
 
 -- To view ticker file, run:
@@ -23,7 +23,7 @@ dispatch =  [ ("view", viewTL), ("graph", downloadH2Graph),
 -- To download historical time series and save them to a file for the companies IBM, MSFT, AAPL and KO:
 --    stack exec yadata-exe download IBM MSFT AAPL KO
 
--- To download historical time series, calculate their moving averages and 
+-- To download historical time series, calculate their moving averages and
 -- save them to a file for the companies IBM, MSFT, AAPL and KO:
 --    stack exec yadata-exe mva IBM MSFT AAPL KO
 
@@ -33,7 +33,6 @@ dispatch =  [ ("view", viewTL), ("graph", downloadH2Graph),
 
 main :: IO () --(Either YahooException C.ByteString)
 main = do
-    (command:args) <- getArgs  
-    let (Just action) = lookup command dispatch  
-    action args 
-
+    (command:args) <- getArgs
+    let (Just action) = lookup command dispatch
+    action args

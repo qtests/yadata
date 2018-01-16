@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module LibAPI
+module Yadata.LibAPI
 (
     viewTL,
     downloadH2Graph,
@@ -11,9 +11,9 @@ module LibAPI
     createGraphForNewsletter
 ) where
 
-import LibCSV
-import LibTS
-import LibYahoo
+import Yadata.LibCSV
+import Yadata.LibTS
+import Yadata.LibYahoo
 
 -- import CSV related functions
 import qualified Data.ByteString.Lazy.Char8 as C

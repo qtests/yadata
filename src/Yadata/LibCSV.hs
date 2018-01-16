@@ -1,6 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 
-module LibCSV
+module Yadata.LibCSV
     ( read2Double
     , read2UTCTime
     , getColumnInCSV
@@ -8,9 +8,9 @@ module LibCSV
     , delColumnInCSV
     ) where
 
-import Text.CSV
 import Data.List
 import Data.Time
+import Text.CSV
 
 
 {-|
@@ -50,7 +50,7 @@ findColumnIndexInCSV :: CSV -> String -> Either String Integer
 findColumnIndexInCSV csv columnName =
     case lookupResponse of
           Nothing -> Left "The column does not exist in this CSV!"
-          Just x -> Right (fromIntegral x)
+          Just x  -> Right (fromIntegral x)
     where
       -- This line does the lookup to see if column is in our CSV
       lookupResponse = findIndex (== columnName) (head csv)
@@ -64,27 +64,27 @@ findColumnsIndicesInCSV csv columnsNames =
 
 -- each n = map head . takeWhile (not . null) . iterate (drop n)
 getColumnInCSV :: CSV -> String -> Either String [String]
-getColumnInCSV csv columnName = 
-      applyToColumnInCSV id csv columnName   
+getColumnInCSV csv columnName =
+      applyToColumnInCSV id csv columnName
 
 
 getColumnInCSVEither :: Either a CSV -> String -> Either String [String]
-getColumnInCSVEither csv columnName = do 
-      either (\_ -> Left "Error reading CSV!" ) 
+getColumnInCSVEither csv columnName = do
+      either (\_ -> Left "Error reading CSV!" )
              (\x -> applyToColumnInCSV id x columnName) csv
 
 
 removeAt :: Int -> [a] -> [a]
 removeAt i [] = []
 removeAt i list =
-      if (i > length list || i < 0) 
+      if (i > length list || i < 0)
             then list
             else (init alist) ++ blist
                      where (alist, blist) = splitAt (i + 1) list
 
 
 delColumnInCSV :: CSV -> String -> [[Field]]
-delColumnInCSV acsv columnName = 
+delColumnInCSV acsv columnName =
       map (removeAt columnIndex') records
       where
          columnIndex = findColumnIndexInCSV acsv columnName
