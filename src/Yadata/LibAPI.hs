@@ -25,8 +25,9 @@ import Control.Arrow (first)
 import Data.Either
 import Data.Time
 
--- import graphiccs
-import Graphics.Rendering.Chart.Backend.Diagrams
+-- import graphics
+import Graphics.Rendering.Chart.Backend.Cairo
+import Graphics.Rendering.Chart.Backend.Diagrams hiding (toFile)
 import Graphics.Rendering.Chart.Easy
 
 -- import system process

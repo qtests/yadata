@@ -37,6 +37,9 @@ library
                      , unordered-containers >= 0.2.8.0
                      , Chart
                      , Chart-diagrams
+                     , Chart-cairo
+                     , cairo >= 0.9.11
+                     , colour >= 2.2.1 && < 2.4
                      , process
                      , containers
 
