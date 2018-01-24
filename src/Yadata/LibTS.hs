@@ -39,7 +39,6 @@ module Yadata.LibTS
     movingAverageXTS
 ) where
 
-import Control.Arrow (second)
 import Data.Either
 import Data.List
 import qualified Data.Map as Map
@@ -364,13 +363,13 @@ dataXTS (XTS _ dta cnames) = (dta, cnames)
 
 
 takeRowXTS :: Num a => Int -> XTS a -> XTS a
-takeRowXTS 0 ts                = XTS [] [] []
+takeRowXTS 0 _                 = XTS [] [] []
 takeRowXTS _ ts@(XTS [] [] []) = ts
 takeRowXTS n (XTS x y z)       = XTS (take n x) (fmap (take n) y) z
 
 
 takeColXTS :: Num a => Int -> XTS a -> XTS a
-takeColXTS 0 ts                = XTS [] [] []
+takeColXTS 0 _                 = XTS [] [] []
 takeColXTS _ ts@(XTS [] [] []) = ts
 takeColXTS n (XTS x y z)       = XTS x (take n y) (take n z)
 
