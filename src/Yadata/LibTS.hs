@@ -32,7 +32,7 @@ module Yadata.LibTS
     combineXTSnXTS,
     indexXTS,
     dataXTS,
-    takeXTS,
+    takeRowXTS,
     takeColXTS,
     diffXTS,
     logdiffXTS,
@@ -365,10 +365,10 @@ dataXTS :: Num a => XTS a -> ([ColXTS a], [String])
 dataXTS (XTS _ dta cnames) = (dta, cnames)
 
 
-takeXTS :: Num a => Int -> XTS a -> XTS a
-takeXTS 0 ts                = ts
-takeXTS _ ts@(XTS [] [] []) = ts
-takeXTS n (XTS x y z)       = XTS (take n x) (fmap (take n) y) z
+takeRowXTS :: Num a => Int -> XTS a -> XTS a
+takeRowXTS 0 ts                = ts
+takeRowXTS _ ts@(XTS [] [] []) = ts
+takeRowXTS n (XTS x y z)       = XTS (take n x) (fmap (take n) y) z
 
 
 takeColXTS :: Num a => Int -> XTS a -> XTS a

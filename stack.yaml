@@ -8,3 +8,6 @@ extra-deps: []
 flags: {}
 
 extra-package-dbs: []
+
+extra-include-dirs: ["C:/hsk/bin/GTK/include", "C:/hsk/bin/GTK/bin"]
+extra-lib-dirs: ["C:/hsk/bin/GTK/lib", "C:/hsk/bin/GTK/bin"]

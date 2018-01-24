@@ -102,7 +102,7 @@ downloadH2File :: [String] -> IO ()
 downloadH2File tickers = do
     print tickers
     xts <- downData tickers (createXTSRaw [] [] [])
-    print $ takeXTS 2 xts
+    print $ takeRowXTS 2 xts
     writeFileXTS "testFile_hd.csv" xts
     return ()
 
@@ -112,7 +112,7 @@ movAvg :: [String] -> IO ()
 movAvg inInfo = do
     print inInfo
     xts <- downData inInfo (createXTSRaw [] [] [])
-    print $ takeXTS 2 xts
+    print $ takeRowXTS 2 xts
     let result = movingAverageXTS 10 xts
     writeFileXTS "testFile_ma.csv" result
     return ()
@@ -125,7 +125,7 @@ movAvgStrategy inInfo = do
 
     -- Data
     xts <- downData inInfo (createXTSRaw [] [] [])
-    print $ takeXTS 2 xts
+    print $ takeRowXTS 2 xts
     let (XTS indx prices conames) = xts
 
     -- Signal
@@ -143,7 +143,7 @@ movAvgStrategy inInfo = do
     -- Out
     writeFileXTS "testFile_strat_weights.csv" $ XTS indx sig conames
     writeFileXTS "testFile_strat_perform.csv" $ XTS indx perf conames
-    plotXTS      "testFile_strat_plot.svg"    $ takeColXTS 5 $ XTS indx perf conames
+    plotXTS      "testFile_strat_plot.png"    $ takeColXTS 5 $ XTS indx perf conames
 
     -- launch firefox
     -- createProcess (shell $ "firefox testFile_strat_plot.svg")

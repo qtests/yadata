@@ -15,6 +15,7 @@ import Data.Int
 import Data.Maybe (fromMaybe)
 import Data.Text as T
 import Data.Time.Clock
+import Data.Time.Clock.POSIX
 import Data.Typeable
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
@@ -27,11 +28,11 @@ crumbleLink ticker =
   "https://finance.yahoo.com/quote/" ++ ticker ++ "/history?p=" ++ ticker
 
   -- https://stackoverflow.com/questions/12916353/how-do-i-convert-from-unixtime-to-a-date-time-in-haskell
-yahooDataLink :: String -> String -> String
-yahooDataLink ticker crumb =
-  "https://query1.finance.yahoo.com/v7/finance/download/" ++ ticker ++
-  "?period1=1301686274&period2=1504364674&interval=1d&events=history&crumb=" ++
-  crumb
+yahooDataLink :: (Integral a, Show a) => String -> String -> a -> String
+yahooDataLink ticker crumb endDate =
+    "https://query1.finance.yahoo.com/v7/finance/download/" ++ ticker ++
+    "?period1=1000000000&period2=" ++ (show endDate) ++
+    "&interval=1d&events=history&crumb=" ++ crumb
 
 crumblePattern :: String
 crumblePattern = "CrumbStore\":{\"crumb\":\"(.*?)\"}" :: String
@@ -71,8 +72,12 @@ getYahooData ticker = do
       now <- getCurrentTime
       let (jar1, _) = updateCookieJar crb cookieRequest now (createCookieJar [])
       let body = crb ^. W.responseBody
+      qEndDate <- getPOSIXTime
       dataRequest <-
-        parseRequest (yahooDataLink ticker (C.unpack $ getCrumble body))
+        parseRequest (yahooDataLink ticker 
+                      (C.unpack $ getCrumble body) 
+                      (round qEndDate :: Integer)
+                     )
       now2 <- getCurrentTime
       let (dataReq, jar2) = insertCookiesIntoRequest dataRequest jar1 now2
       result <-
