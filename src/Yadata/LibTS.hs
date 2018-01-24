@@ -40,13 +40,11 @@ module Yadata.LibTS
 ) where
 
 import Control.Arrow (second)
-import Data.Char
 import Data.Either
 import Data.List
 import qualified Data.Map as Map
 import Data.Maybe
 import Data.Semigroup
-import Data.String
 import Data.Time
 import Data.Time.Calendar.WeekDate
 import Text.CSV
@@ -366,7 +364,7 @@ dataXTS (XTS _ dta cnames) = (dta, cnames)
 
 
 takeRowXTS :: Num a => Int -> XTS a -> XTS a
-takeRowXTS 0 ts                = ts
+takeRowXTS 0 ts                = XTS [] [] []
 takeRowXTS _ ts@(XTS [] [] []) = ts
 takeRowXTS n (XTS x y z)       = XTS (take n x) (fmap (take n) y) z
 
