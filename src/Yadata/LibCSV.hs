@@ -2,7 +2,7 @@
 
 module Yadata.LibCSV
     ( read2Double
-    , read2UTCTime
+    , read2UTCTimeMaybe
     , getColumnInCSV
     , getColumnInCSVEither
     , delColumnInCSV
@@ -11,7 +11,6 @@ module Yadata.LibCSV
 import Data.List
 import Data.Time
 import Text.CSV
-
 
 {-|
    Converts a number in String to Double
@@ -22,9 +21,11 @@ read2Double x = read x :: Double
 {-|
    Converts a date in String to UTCTime
 -}
-read2UTCTime :: String -> String -> UTCTime
-read2UTCTime format x = parseTimeOrError True defaultTimeLocale format x :: UTCTime
+-- read2UTCTime :: String -> String -> UTCTime
+-- read2UTCTime format x = parseTimeOrError True defaultTimeLocale format x :: UTCTime
 
+read2UTCTimeMaybe :: String -> String -> Maybe UTCTime
+read2UTCTimeMaybe format x = parseTimeM True defaultTimeLocale format x :: Maybe UTCTime
 
 {-|
    Applies a function to a column (specified by a Sring) in a CSV value

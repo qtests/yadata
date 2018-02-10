@@ -23,6 +23,7 @@ import Text.CSV
 -- import other
 import Control.Arrow (first)
 import Data.Either
+import Data.Maybe
 import Data.Time
 
 -- import graphics
@@ -47,10 +48,11 @@ priceTimeSeries ticker = do
    ydata <- getYahooData ticker :: IO (Either YahooException C.ByteString)
    let ycsv = either (\_ -> Left YStatusCodeException) id
                (mapM (\x -> parseCSV "Ticker" (DBLU.toString x )) ydata)
-   let dates = getColumnInCSVEither ycsv "Date"
+   let dates_ = (fmap . fmap) (read2UTCTimeMaybe "%Y-%m-%d") $ getColumnInCSVEither ycsv "Date"
+   let dates = fmap (\x-> if any (== Nothing) x then [] else catMaybes x) dates_
    let closep = getColumnInCSVEither ycsv "Adj Close"
-   return $ zip <$> (map (read2UTCTime "%Y-%m-%d") <$> dates) <*> (map read2Double <$> closep)
-
+   -- return $ zip <$> ( map (read2UTCTime "%Y-%m-%d") <$> dates) <*> (map read2Double <$> closep)
+   return $ zip <$> ( dates ) <*> (map read2Double <$> closep)
 
 -- ------------------------------------------
 -- API

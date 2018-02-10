@@ -174,10 +174,11 @@ readFileTS path = do
     let tstext = readFile path
     txt <- tstext
     let ptxt = parseCSV path txt
-    let date =  either
+    let date_ =  either
                 (\_-> [])
-                (\x-> fmap (read2UTCTime "%Y-%m-%d %H:%M:%S %Z") x)
-                                          (getColumnInCSVEither ptxt "Date")
+                (\x-> fmap (read2UTCTimeMaybe "%Y-%m-%d %H:%M:%S %Z") x)
+                                (getColumnInCSVEither ptxt "Date")
+    let date = if any (== Nothing) date_ then [] else catMaybes date_                      
     let value = either
                 (\_-> [])
                 (\x-> fmap read2Double x) (getColumnInCSVEither ptxt "Value")
@@ -294,9 +295,10 @@ readFileXTS path = do
             -- -----------------------------------------------------------------------------------------
             -- Add aligning !!! Add aligning !!! Add aligning !!! Add aligning !!! Add aligning !!! ----
             -- -----------------------------------------------------------------------------------------
-            let dates = either
+            let dates_ = either
                         (\_ -> [])
-                        (\x -> fmap (read2UTCTime "%Y-%m-%d %H:%M:%S %Z") x ) $ getColumnInCSV dta "Date"
+                        (\x -> fmap (read2UTCTimeMaybe "%Y-%m-%d %H:%M:%S %Z") x ) $ getColumnInCSV dta "Date"
+            let dates = if any (== Nothing) dates_ then [] else catMaybes dates_
             let restD = (fmap . fmap ) read2Double $ transpose $ delColumnInCSV dta "Date"
             let colnames = if (length dta == 0) then [] else filter (/= "Date") $ head dta
             return $ XTS dates restD colnames
