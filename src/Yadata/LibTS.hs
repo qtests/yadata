@@ -244,7 +244,7 @@ diffTS (TS times values) = TS times (0:diffValues)
 
 -- Moving Average
 movingAvg :: (Real a) => Int -> [a]  -> [Double]
-movingAvg n []  = []
+movingAvg _ []  = []
 movingAvg n vals = if (length nextVals) == n
                    then (mean nextVals):(movingAvg n restVals)
                    else []

@@ -11,15 +11,12 @@ import Control.Lens
 import Control.Monad.Except
 import qualified Data.ByteString.Lazy as B (ByteString, drop, pack, take)
 import qualified Data.ByteString.Lazy.Char8 as C
-import Data.Int
-import Data.Maybe (fromMaybe)
-import Data.Text as T
-import Data.Time.Clock
+import Data.Time
 import Data.Time.Clock.POSIX
 import Data.Typeable
 import Network.HTTP.Client
 import Network.HTTP.Client.TLS
-import Network.HTTP.Simple hiding (httpLbs)
+-- import Network.HTTP.Simple hiding (httpLbs)
 import qualified Network.Wreq as W (responseBody, responseStatus, statusCode)
 import Text.Regex.PCRE
 
@@ -28,10 +25,11 @@ crumbleLink ticker =
   "https://finance.yahoo.com/quote/" ++ ticker ++ "/history?p=" ++ ticker
 
   -- https://stackoverflow.com/questions/12916353/how-do-i-convert-from-unixtime-to-a-date-time-in-haskell
-yahooDataLink :: (Integral a, Show a) => String -> String -> a -> String
-yahooDataLink ticker crumb endDate =
+  
+yahooDataLink4TimePeriod :: (Integral a, Show a) => String -> String -> a -> a -> String
+yahooDataLink4TimePeriod ticker crumb startDate endDate =
     "https://query1.finance.yahoo.com/v7/finance/download/" ++ ticker ++
-    "?period1=1000000000&period2=" ++ (show endDate) ++
+    "?period1=" ++ (show startDate) ++"&period2=" ++ (show endDate) ++
     "&interval=1d&events=history&crumb=" ++ crumb
 
 crumblePattern :: String
@@ -61,6 +59,14 @@ instance Exception YahooException
 
 getYahooData :: String -> IO (Either YahooException C.ByteString)
 getYahooData ticker = do
+  endDate <- getCurrentTime
+  let starDate = UTCTime  (fromGregorian 2000 01 01) 0
+  res <- getYahooHistoData ticker starDate endDate
+  return res
+
+
+getYahooHistoData :: String -> UTCTime -> UTCTime-> IO (Either YahooException C.ByteString)
+getYahooHistoData ticker startDate endDate= do
   manager <- newManager $ managerSetProxy noProxy tlsManagerSettings
   setGlobalManager manager
   cookieRequest <- parseRequest (crumbleLink "KO")
@@ -72,11 +78,12 @@ getYahooData ticker = do
       now <- getCurrentTime
       let (jar1, _) = updateCookieJar crb cookieRequest now (createCookieJar [])
       let body = crb ^. W.responseBody
-      qEndDate <- getPOSIXTime
+      -- qEndDate <- getPOSIXTime
       dataRequest <-
-        parseRequest (yahooDataLink ticker 
+        parseRequest (yahooDataLink4TimePeriod ticker 
                       (C.unpack $ getCrumble body) 
-                      (round qEndDate :: Integer)
+                      (round $ (utcTimeToPOSIXSeconds startDate) :: Integer)
+                      (round $ (utcTimeToPOSIXSeconds endDate) :: Integer)
                      )
       now2 <- getCurrentTime
       let (dataReq, jar2) = insertCookiesIntoRequest dataRequest jar1 now2

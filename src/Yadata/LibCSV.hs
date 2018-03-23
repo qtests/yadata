@@ -42,7 +42,6 @@ applyToColumnInCSV func csv column =
       records = tail $ filter (\record -> nfieldsInFile == length record) csv
       elements ci = map (\record -> genericIndex record ci) records
 
-
 {-|
    Gets a column from a CSV value.
    Returns (Left errorMessage) or (Right index)
