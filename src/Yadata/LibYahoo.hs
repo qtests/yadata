@@ -3,6 +3,7 @@
 
 module Yadata.LibYahoo
   ( getYahooData
+  , getYahooHistoData    
   , YahooException(..)
   ) where
 
