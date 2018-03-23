@@ -30,7 +30,7 @@ crumbleLink ticker =
 yahooDataLink4TimePeriod :: (Integral a, Show a) => String -> String -> a -> a -> String
 yahooDataLink4TimePeriod ticker crumb startDate endDate =
     "https://query1.finance.yahoo.com/v7/finance/download/" ++ ticker ++
-    "?period1=" ++ (show startDate) ++"&period2=" ++ (show endDate) ++
+    "?period1=" ++ show startDate ++"&period2=" ++ show endDate ++
     "&interval=1d&events=history&crumb=" ++ crumb
 
 crumblePattern :: String
@@ -62,8 +62,8 @@ getYahooData :: String -> IO (Either YahooException C.ByteString)
 getYahooData ticker = do
   endDate <- getCurrentTime
   let starDate = UTCTime  (fromGregorian 2000 01 01) 0
-  res <- getYahooHistoData ticker starDate endDate
-  return res
+  getYahooHistoData ticker starDate endDate
+
 
 
 getYahooHistoData :: String -> UTCTime -> UTCTime-> IO (Either YahooException C.ByteString)
@@ -83,8 +83,8 @@ getYahooHistoData ticker startDate endDate= do
       dataRequest <-
         parseRequest (yahooDataLink4TimePeriod ticker 
                       (C.unpack $ getCrumble body) 
-                      (round $ (utcTimeToPOSIXSeconds startDate) :: Integer)
-                      (round $ (utcTimeToPOSIXSeconds endDate) :: Integer)
+                      (round (utcTimeToPOSIXSeconds startDate) :: Integer)
+                      (round (utcTimeToPOSIXSeconds endDate) :: Integer)
                      )
       now2 <- getCurrentTime
       let (dataReq, jar2) = insertCookiesIntoRequest dataRequest jar1 now2
@@ -96,5 +96,5 @@ getYahooHistoData ticker startDate endDate= do
           let body2 = d ^. W.responseBody
           let status = d ^. W.responseStatus . W.statusCode
           if status == 200
-            then return $ Right $ body2
+            then return $ Right body2
             else return $ Left YStatusCodeException
