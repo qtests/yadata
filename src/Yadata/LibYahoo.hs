@@ -30,7 +30,7 @@ crumbleLink ticker =
 yahooDataLink4TimePeriod :: (Integral a, Show a) => String -> String -> a -> a -> String
 yahooDataLink4TimePeriod ticker crumb startDate endDate =
     "https://query1.finance.yahoo.com/v7/finance/download/" ++ ticker ++
-    "?period1=" ++ (show startDate) ++"&period2=" ++ (show endDate) ++
+    "?period1=" ++ show startDate ++"&period2=" ++ show endDate ++
     "&interval=1d&events=history&crumb=" ++ crumb
 
 crumblePattern :: String
@@ -83,8 +83,8 @@ getYahooHistoData ticker startDate endDate= do
       dataRequest <-
         parseRequest (yahooDataLink4TimePeriod ticker 
                       (C.unpack $ getCrumble body) 
-                      (round $ (utcTimeToPOSIXSeconds startDate) :: Integer)
-                      (round $ (utcTimeToPOSIXSeconds endDate) :: Integer)
+                      (round (utcTimeToPOSIXSeconds startDate) :: Integer)
+                      (round (utcTimeToPOSIXSeconds endDate) :: Integer)
                      )
       now2 <- getCurrentTime
       let (dataReq, jar2) = insertCookiesIntoRequest dataRequest jar1 now2
