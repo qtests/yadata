@@ -9,8 +9,8 @@ module Yadata.LibYahoo
 
 import Control.Exception as E
 import Control.Lens
-import Control.Monad.Except
-import qualified Data.ByteString.Lazy as B (ByteString, drop, pack, take)
+-- import Control.Monad.Except
+import qualified Data.ByteString.Lazy as B (ByteString, drop, take)
 import qualified Data.ByteString.Lazy.Char8 as C
 import Data.Time
 import Data.Time.Clock.POSIX

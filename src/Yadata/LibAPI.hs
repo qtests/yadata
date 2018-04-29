@@ -8,12 +8,14 @@ module Yadata.LibAPI
     downloadH2File,
     movAvg,
     movAvgStrategy,
-    createGraphForNewsletter
+    createGraphForNewsletter,
+    downloadCoin
 ) where
 
 import Yadata.LibCSV
 import Yadata.LibTS
 import Yadata.LibYahoo
+import Yadata.LibCoinmarketcap
 
 -- import CSV related functions
 import qualified Data.ByteString.Lazy.Char8 as C
@@ -32,7 +34,7 @@ import Graphics.Rendering.Chart.Backend.Diagrams hiding (toFile)
 import Graphics.Rendering.Chart.Easy
 
 -- import system process
-import Control.Exception as E
+-- import Control.Exception as E
 import System.IO (FilePath)
 import System.Process
 
@@ -43,16 +45,26 @@ import Control.Monad
 preparePrices :: Num b => Either String [(UTCTime, b)] -> [(LocalTime, b)]
 preparePrices x = map (first (utcToLocalTime utc)) (concat $ rights [x])
 
+
 priceTimeSeries :: String -> IO (Either String [(UTCTime, Double)] )
-priceTimeSeries ticker = do
-   ydata <- getYahooData ticker :: IO (Either YahooException C.ByteString)
-   let ycsv = either (\_ -> Left YStatusCodeException) id
-               (mapM (\x -> parseCSV "Ticker" (DBLU.toString x )) ydata)
-   let dates_ = (fmap . fmap) (read2UTCTimeMaybe "%Y-%m-%d") $ getColumnInCSVEither ycsv "Date"
-   let dates = fmap (\x-> if any (== Nothing) x then [] else catMaybes x) dates_
-   let closep = getColumnInCSVEither ycsv "Adj Close"
-   -- return $ zip <$> ( map (read2UTCTime "%Y-%m-%d") <$> dates) <*> (map read2Double <$> closep)
-   return $ zip <$> ( dates ) <*> (map read2Double <$> closep)
+priceTimeSeries ticker = priceTSWithSource "yahoo" ticker
+
+
+priceTSWithSource :: String -> String -> IO (Either String [(UTCTime, Double)] )
+priceTSWithSource source ticker
+   | source == "yahoo" =  do ydata <- getYahooData ticker :: IO (Either YahooException C.ByteString)
+                             let dcsv = either (\_ -> Left YStatusCodeException) id
+                                     (mapM (\x -> parseCSV "Ticker" (DBLU.toString x )) ydata)
+                             let dates_ = (fmap . fmap) (read2UTCTimeMaybe "%Y-%m-%d") $ getColumnInCSVEither dcsv "Date"
+                             let dates = fmap (\x-> if any (== Nothing) x then [] else catMaybes x) dates_
+                             let closep = getColumnInCSVEither dcsv "Adj Close"
+                             return $ zip <$> ( dates ) <*> (map read2Double <$> closep)
+
+   | otherwise         =  do dcsv <- getCoinmarkData ticker
+                             let dates_ = (fmap . fmap) (read2UTCTimeMaybe "%b %d %Y") $ getColumnInCSVEither dcsv "Date"
+                             let dates = fmap (\x-> if any (== Nothing) x then [] else catMaybes x) dates_
+                             let closep = getColumnInCSVEither dcsv "Close"
+                             return $ zip <$> ( dates ) <*> (map read2Double <$> closep)
 
 -- ------------------------------------------
 -- API
@@ -78,12 +90,22 @@ downloadH2Graph tickers = do
                 let tk = tickers !! 0
                 ts <- priceTimeSeries tk
                 -- Plot
-                let plotFileName = "plot-series.svg"
+                let plotFileName = "plot-series.png"
                 toFile def plotFileName $ plot (line "" [preparePrices ts])
                 putStrLn $ tk ++ " plot saved to: " ++ plotFileName
                 createProcess (shell $ "firefox " ++ plotFileName)
                 return ()
 
+downloadCoin :: [String] -> IO ()
+downloadCoin tickers = do
+    let tk = tickers !! 0
+    ts <- priceTSWithSource "LibCoinmarketcap" tk
+    -- Plot
+    let plotFileName = "plot-series.png"
+    toFile def plotFileName $ plot (line "" [preparePrices ts])
+    putStrLn $ tk ++ " plot saved to: " ++ plotFileName
+    createProcess (shell $ "firefox " ++ plotFileName)
+    return ()
 -- https://stackoverflow.com/questions/17719620/while-loop-in-haskell-with-a-condition
 -- https://stackoverflow.com/questions/27857541/abstraction-for-monadic-recursion-with-unless
 

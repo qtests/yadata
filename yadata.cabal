@@ -19,6 +19,7 @@ library
                      , Yadata.LibCSV
                      , Yadata.LibAPI
                      , Yadata.LibTS
+                     , Yadata.LibCoinmarketcap
   build-depends:       base >= 4.7 && < 5
                      , wreq
                      , regex-pcre-builtin
@@ -42,7 +43,8 @@ library
                      , colour >= 2.2.1 && < 2.4
                      , process
                      , containers
-                     
+                     , hxt
+                     , MissingH
 
 
   default-language:    Haskell2010
@@ -60,9 +62,7 @@ executable yadata-exe
                      , utf8-string
                      , csv
                      , time
-                     -- 
-                     , hxt
-                     , MissingH
+
 
   default-language:    Haskell2010
 
