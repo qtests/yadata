@@ -52,20 +52,22 @@ priceTimeSeries ticker = priceTSWithSource "yahoo" ticker
 
 priceTSWithSource :: String -> String -> IO (Either String [(UTCTime, Double)] )
 priceTSWithSource source ticker
-   | source == "yahoo" =  do ydata <- getYahooData ticker :: IO (Either YahooException C.ByteString)
-                             let dcsv = either (\_ -> Left YStatusCodeException) id
+   | source == "yahoo" = do ydata <- getYahooData ticker :: IO (Either YahooException C.ByteString)
+                            let dcsv = either (\_ -> Left YStatusCodeException) id
                                      (mapM (\x -> parseCSV "Ticker" (DBLU.toString x )) ydata)
-                             let dates_ = (fmap . fmap) (read2UTCTimeMaybe "%Y-%m-%d") $ getColumnInCSVEither dcsv "Date"
-                             let dates = fmap (\x-> if any (== Nothing) x then [] else catMaybes x) dates_
-                             let closep = getColumnInCSVEither dcsv "Adj Close"
-                             return $ zip <$> ( dates ) <*> (map read2Double <$> closep)
+                            let dates_ = (fmap . fmap) (read2UTCTimeMaybe "%Y-%m-%d") $ getColumnInCSVEither dcsv "Date"
+                            let dates = fmap (\x-> if any (== Nothing) x then [] else catMaybes x) dates_
+                            let closep = getColumnInCSVEither dcsv "Adj Close"
+                            return $ zip <$> ( dates ) <*> (map read2Double <$> closep)
 
-   | otherwise         =  do dcsv <- getCoinmarkData ticker
-                             let dates_ = (fmap . fmap) (read2UTCTimeMaybe "%b %d %Y") $ getColumnInCSVEither dcsv "Date"
-                             let dates = fmap (\x-> if any (== Nothing) x then [] else catMaybes x) dates_
-                             let closep = getColumnInCSVEither dcsv "Close"
-                             return $ zip <$> ( dates ) <*> (map read2Double <$> closep)
+   | source == "LibCoinmarketcap" =  do dcsv <- getCoinmarkData ticker
+                                        let dates_ = (fmap . fmap) (read2UTCTimeMaybe "%b %d %Y") 
+                                                       $ getColumnInCSVEither dcsv "Date"
+                                        let dates = fmap (\x-> if any (== Nothing) x then [] else catMaybes x) dates_
+                                        let closep = getColumnInCSVEither dcsv "Close"
+                                        return $ zip <$> ( dates ) <*> (map read2Double <$> closep)
 
+   | otherwise                    =     return $ Left "priceTSWithSource: Unknown source!"
 -- ------------------------------------------
 -- API
 ---------------------------------------------
