@@ -9,7 +9,8 @@ module Yadata.LibAPI
     movAvg,
     movAvgStrategy,
     createGraphForNewsletter,
-    downloadCoin
+    downloadCoin,
+    downDataExt
 ) where
 
 import Yadata.LibCSV
@@ -112,6 +113,23 @@ downloadCoin tickers = do
 -- https://stackoverflow.com/questions/27857541/abstraction-for-monadic-recursion-with-unless
 
 -- Download data: a helper function
+
+downDataExt :: [String] -> [String] -> XTS Double -> IO (XTS Double, [String])
+downDataExt [] tf accum = return (accum, tf)
+downDataExt (tk:rest) tkFailed accum = do
+    ts <- priceTimeSeries tk
+    ts <- if (isLeft ts || (fmap length ts) == Right 0)
+                then priceTimeSeries tk
+                else return ts
+
+    let tkf = if (isLeft ts || (fmap length ts) == Right 0)
+                    then [tk]
+                    else []
+
+    let allD = combineXTSnTS accum tk (createTSEither ts)
+    if (rest == []) then return (allD, tkFailed ++ tkf)
+                    else downDataExt rest (tkFailed ++ tkf) allD
+
 downData :: [String] -> XTS Double -> IO (XTS Double)
 downData [] accum = return accum
 downData (tk:rest) accum = do
@@ -127,9 +145,14 @@ downData (tk:rest) accum = do
 downloadH2File :: [String] -> IO ()
 downloadH2File tickers = do
     print tickers
-    xts <- downData tickers (createXTSRaw [] [] [])
+    (xts, tks) <- downDataExt tickers [] (createXTSRaw [] [] [])
+    (xts, tks) <- if (length tks > 0)
+                        then downDataExt tks [] xts
+                        else return (xts, tks)
     print $ takeRowXTS 2 xts
+    print tks
     writeFileXTS "testFile_hd.csv" xts
+    writeFile "testFile_hd_errors.csv" $ show tks
     return ()
 
 -- downloadH2File ["IBM", "MSFT", "AAPL", "KO" ]
