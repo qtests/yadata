@@ -6,11 +6,11 @@ module Yadata.LibAPI
     downloadH2Graph,
     priceTimeSeries,
     downloadH2File,
+    runDownloadH2File,
     movAvg,
     movAvgStrategy,
     createGraphForNewsletter,
-    downloadCoin,
-    downDataExt
+    downloadCoin
 ) where
 
 import Yadata.LibCSV
@@ -56,17 +56,17 @@ priceTSWithSource source ticker
    | source == "yahoo" = do ydata <- getYahooData ticker :: IO (Either YahooException C.ByteString)
                             let dcsv = either (\_ -> Left YStatusCodeException) id
                                      (mapM (\x -> parseCSV "Ticker" (DBLU.toString x )) ydata)
-                            let dates_ = (fmap . fmap) (read2UTCTimeMaybe "%Y-%m-%d") $ getColumnInCSVEither dcsv "Date"
-                            let dates = fmap (\x-> if any (== Nothing) x then [] else catMaybes x) dates_
-                            let closep = getColumnInCSVEither dcsv "Adj Close"
-                            return $ zip <$> ( dates ) <*> (map read2Double <$> closep)
+                            let dates = fmap (readClean2UTCTime "%Y-%m-%d") $ getColumnInCSVEither dcsv "Date"
+                            let closep_ = map read2DoubleMaybe <$> getColumnInCSVEither dcsv "Adj Close"
+                            let closep  = fmap (catMaybes . backFillNothings) closep_
+                            return $ zip <$> dates <*> closep
 
    | source == "LibCoinmarketcap" =  do dcsv <- getCoinmarkData ticker
-                                        let dates_ = (fmap . fmap) (read2UTCTimeMaybe "%b %d %Y") 
+                                        let dates = fmap  (readClean2UTCTime "%b %d %Y") 
                                                        $ getColumnInCSVEither dcsv "Date"
-                                        let dates = fmap (\x-> if any (== Nothing) x then [] else catMaybes x) dates_
-                                        let closep = getColumnInCSVEither dcsv "Close"
-                                        return $ zip <$> ( dates ) <*> (map read2Double <$> closep)
+                                        let closep_ = (map read2DoubleMaybe) <$> getColumnInCSVEither dcsv "Close"
+                                        let closep  = fmap (catMaybes . backFillNothings) closep_
+                                        return $ zip <$> dates <*> closep
 
    | otherwise                    =     return $ Left "priceTSWithSource: Unknown source!"
 -- ------------------------------------------
@@ -117,6 +117,9 @@ downloadCoin tickers = do
 downDataExt :: [String] -> [String] -> XTS Double -> IO (XTS Double, [String])
 downDataExt [] tf accum = return (accum, tf)
 downDataExt (tk:rest) tkFailed accum = do
+    
+    print $ "Donwloading : " ++ tk
+
     ts <- priceTimeSeries tk
     ts <- if (isLeft ts || (fmap length ts) == Right 0)
                 then priceTimeSeries tk
@@ -133,6 +136,7 @@ downDataExt (tk:rest) tkFailed accum = do
 downData :: [String] -> XTS Double -> IO (XTS Double)
 downData [] accum = return accum
 downData (tk:rest) accum = do
+    print $ "Donwloading : " ++ tk
     ts <- priceTimeSeries tk
     ts <- if (isLeft ts || (fmap length ts) == Right 0)
                 then priceTimeSeries tk
@@ -142,7 +146,20 @@ downData (tk:rest) accum = do
                     else downData rest allD
 
 
+-- let fileName = "sp500.csv", let colName = "Ticker"
+runDownloadH2File :: [String] -> IO ()
+runDownloadH2File [] = return ()
+runDownloadH2File [fileName,  colName]  = do
+    contents <- readFile fileName
+    let txt = parseCSV fileName contents
+    let tickers = concat $ rights [getColumnInCSVEither txt colName]
+    -- downloadH2File $ take 10 tickers 
+    downloadH2File tickers 
+    return ()
+
+    
 downloadH2File :: [String] -> IO ()
+downloadH2File [] = return ()
 downloadH2File tickers = do
     print tickers
     (xts, tks) <- downDataExt tickers [] (createXTSRaw [] [] [])

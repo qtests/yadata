@@ -12,7 +12,8 @@ import System.Environment
 -- https://stackoverflow.com/questions/1317399/getting-the-local-appdata-folder-in-haskell
 
 dispatch :: [(String, [String] -> IO ())]
-dispatch =  [ ("view", viewTL), ("graph", downloadH2Graph), ("download", downloadH2File),
+dispatch =  [ ("view", viewTL), ("graph", downloadH2Graph), 
+              ("download", downloadH2File),  ("rundownload", runDownloadH2File),
               ("mva", movAvg), ("maStrat", movAvgStrategy), ("coin", downloadCoin) ]
 
 -- To view ticker file, run:

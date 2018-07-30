@@ -1,8 +1,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Yadata.LibCSV
-    ( read2Double
+    ( read2DoubleMaybe
+    , backFillNothings
+    , cleanNothings
+    , cleanNothings2Doubles
     , read2UTCTimeMaybe
+    , readClean2UTCTime
     , getColumnInCSV
     , getColumnInCSVEither
     , delColumnInCSV
@@ -11,12 +15,34 @@ module Yadata.LibCSV
 import Data.List
 import Data.Time
 import Text.CSV
+import Text.Read (readMaybe)
+import Data.Maybe
 
 {-|
    Converts a number in String to Double
 -}
-read2Double :: String -> Double
-read2Double x = read x :: Double
+read2DoubleMaybe :: String -> Maybe Double
+read2DoubleMaybe x = readMaybe x :: Maybe Double
+
+
+backFillNothings :: Num a => [Maybe a] -> [Maybe a]
+backFillNothings [] = []
+backFillNothings (x:[]) = [x]
+backFillNothings (x:y:[]) = if (isNothing y) then (x:x:[]) else  (x:y:[])
+backFillNothings (x:y:rest) = if (isJust x && isNothing y) then backFillNothings (x:x:rest) else  (x:( backFillNothings (y:rest) ))
+
+
+cleanNothings :: (Num a, Eq a) => [Maybe a] -> [Maybe a]
+cleanNothings values = backfilled
+      where
+         backfilled_ = backFillNothings values
+         backfilled  = if any (==Nothing) backfilled_ 
+            then reverse $ backFillNothings (reverse backfilled_)
+            else backfilled_
+
+            
+cleanNothings2Doubles :: [Maybe Double] -> [Double]
+cleanNothings2Doubles values = catMaybes $ cleanNothings values
 
 {-|
    Converts a date in String to UTCTime
@@ -26,6 +52,17 @@ read2Double x = read x :: Double
 
 read2UTCTimeMaybe :: String -> String -> Maybe UTCTime
 read2UTCTimeMaybe format x = parseTimeM True defaultTimeLocale format x :: Maybe UTCTime
+
+
+readClean2UTCTime :: String -> [String] -> [UTCTime]
+readClean2UTCTime format x = utcTimes
+      where
+            maybeUTCTimes = fmap (read2UTCTimeMaybe format) x
+            utcTimes = if any (== Nothing) maybeUTCTimes 
+                           then []
+                           else catMaybes maybeUTCTimes
+
+
 
 {-|
    Applies a function to a column (specified by a Sring) in a CSV value
