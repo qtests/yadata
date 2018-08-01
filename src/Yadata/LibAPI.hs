@@ -28,6 +28,7 @@ import Control.Arrow (first)
 import Data.Either
 import Data.Maybe
 import Data.Time
+import Data.List
 
 -- import graphics
 import Graphics.Rendering.Chart.Backend.Cairo
@@ -51,22 +52,33 @@ priceTimeSeries :: String -> IO (Either String [(UTCTime, Double)] )
 priceTimeSeries ticker = priceTSWithSource "yahoo" ticker
 
 
+transformData :: Either String [String] -> String -> Either String [String] -> Either String [(UTCTime, Double)]
+transformData (Left a) _ _ = Left a
+transformData _ _ (Left a) = Left a
+transformData (Right []) _ _ = Right []
+transformData _ _ (Right []) = Right []
+transformData indexes dateFormat values = do 
+    ids <- indexes
+    vals <- values
+    let dates = readClean2UTCTime dateFormat ids
+    let numbers = fmap read2DoubleMaybe vals
+    let nidx = findIndices isNothing numbers
+    return $ zip (removeAtIndexList nidx dates) (catMaybes numbers ) 
+                 
+
 priceTSWithSource :: String -> String -> IO (Either String [(UTCTime, Double)] )
 priceTSWithSource source ticker
    | source == "yahoo" = do ydata <- getYahooData ticker :: IO (Either YahooException C.ByteString)
                             let dcsv = either (\_ -> Left YStatusCodeException) id
                                      (mapM (\x -> parseCSV "Ticker" (DBLU.toString x )) ydata)
-                            let dates = fmap (readClean2UTCTime "%Y-%m-%d") $ getColumnInCSVEither dcsv "Date"
-                            let closep_ = map read2DoubleMaybe <$> getColumnInCSVEither dcsv "Adj Close"
-                            let closep  = fmap (catMaybes . backFillNothings) closep_
-                            return $ zip <$> dates <*> closep
+                            let dates = getColumnInCSVEither dcsv "Date"
+                            let closep = getColumnInCSVEither dcsv "Adj Close"
+                            return $ transformData dates "%Y-%m-%d" closep
 
    | source == "LibCoinmarketcap" =  do dcsv <- getCoinmarkData ticker
-                                        let dates = fmap  (readClean2UTCTime "%b %d %Y") 
-                                                       $ getColumnInCSVEither dcsv "Date"
-                                        let closep_ = (map read2DoubleMaybe) <$> getColumnInCSVEither dcsv "Close"
-                                        let closep  = fmap (catMaybes . backFillNothings) closep_
-                                        return $ zip <$> dates <*> closep
+                                        let dates = getColumnInCSVEither dcsv "Date"
+                                        let closep = getColumnInCSVEither dcsv "Close"
+                                        return $ transformData dates "%b %d %Y" closep
 
    | otherwise                    =     return $ Left "priceTSWithSource: Unknown source!"
 -- ------------------------------------------

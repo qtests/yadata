@@ -14,6 +14,7 @@ module Yadata.LibTS
     TS(..),
     createTSRaw,
     createTSEither,
+    createTSEither2,
     writeFileTS,
     readFileTS,
     combineTS,
@@ -117,7 +118,7 @@ backFillTS ts = do
 alignAndBackfillTSIndex :: (Eq a, Num a) => [UTCTime] -> [(UTCTime, a)] -> Either String [(UTCTime, a)]
 alignAndBackfillTSIndex index ts = do
     let (tsIndex, values) = unzip $ alignTS' index ts
-    let values' = cleanNothings values
+    let values' = backFillNothings2S values
     if all (== Nothing) values'
         then Left "No data!"
         else return $ zip tsIndex ( catMaybes values' )
@@ -146,6 +147,19 @@ createTSEither ts = TS abtimes abvalues
         ts1 = if (isLeft ts || fmap length ts == Right 0) then [] else (concat $ rights [ts])
         ab = alignAndBackfillTS ts1
         (abtimes, abvalues) = if (isLeft ab ||fmap length ab == Right 0) then ([], []) else unzip (concat $ rights [ab])
+
+
+createTSEither2 :: Either String [String] -> String -> Either String [String]  -> TS Double
+createTSEither2 (Left _) _ _  = TS [] []
+createTSEither2  _ _ (Left _) = TS [] []
+createTSEither2 (Right []) _ _  = TS [] []
+createTSEither2  _ _ (Right []) = TS [] []
+createTSEither2 index dateFormat values = 
+                     createTSRaw (removeAtIndexList nidx dates) (catMaybes numbers )
+    where
+        dates = concat $ rights [fmap (readClean2UTCTime dateFormat) index]
+        numbers = concat $ rights [ (fmap . fmap) read2DoubleMaybe values ]
+        nidx = findIndices isNothing numbers
 
 
 instance Show a => Show (TS a) where
@@ -189,7 +203,7 @@ combineTS (TS t1 v1) (TS t2 v2) = TS tx vx
         tvMap = foldl (\mm (key, value) -> Map.insert key value mm) Map.empty $ zip t1 v1
         tv2Map = foldl (\mm (key, value) -> Map.insert key value mm) tvMap $ zip t2 v2
         allValues = fmap (\v -> Map.lookup v tv2Map) tx
-        allValuesB = if any (==Nothing) allValues then cleanNothings allValues else allValues
+        allValuesB = if any (==Nothing) allValues then backFillNothings2S allValues else allValues
         vx = if all (==Nothing) allValuesB then [] else catMaybes allValuesB
 
 

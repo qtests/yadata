@@ -3,13 +3,14 @@
 module Yadata.LibCSV
     ( read2DoubleMaybe
     , backFillNothings
-    , cleanNothings
-    , cleanNothings2Doubles
+    , backFillNothings2S
+    , backFillNothings2Doubles
     , read2UTCTimeMaybe
     , readClean2UTCTime
     , getColumnInCSV
     , getColumnInCSVEither
     , delColumnInCSV
+    , removeAtIndexList
     ) where
 
 import Data.List
@@ -32,23 +33,22 @@ backFillNothings (x:y:[]) = if (isNothing y) then (x:x:[]) else  (x:y:[])
 backFillNothings (x:y:rest) = if (isJust x && isNothing y) then backFillNothings (x:x:rest) else  (x:( backFillNothings (y:rest) ))
 
 
-cleanNothings :: (Num a, Eq a) => [Maybe a] -> [Maybe a]
-cleanNothings values = backfilled
+backFillNothings2S :: (Num a, Eq a) => [Maybe a] -> [Maybe a]
+backFillNothings2S values = backfilled
       where
          backfilled_ = backFillNothings values
          backfilled  = if any (==Nothing) backfilled_ 
-            then reverse $ backFillNothings (reverse backfilled_)
-            else backfilled_
+                            then reverse $ backFillNothings (reverse backfilled_)
+                            else backfilled_
 
             
-cleanNothings2Doubles :: [Maybe Double] -> [Double]
-cleanNothings2Doubles values = catMaybes $ cleanNothings values
+backFillNothings2Doubles :: [Maybe Double] -> [Double]
+backFillNothings2Doubles values = catMaybes $ backFillNothings2S values
+
 
 {-|
    Converts a date in String to UTCTime
 -}
--- read2UTCTime :: String -> String -> UTCTime
--- read2UTCTime format x = parseTimeOrError True defaultTimeLocale format x :: UTCTime
 
 read2UTCTimeMaybe :: String -> String -> Maybe UTCTime
 read2UTCTimeMaybe format x = parseTimeM True defaultTimeLocale format x :: Maybe UTCTime
@@ -61,8 +61,6 @@ readClean2UTCTime format x = utcTimes
             utcTimes = if any (== Nothing) maybeUTCTimes 
                            then []
                            else catMaybes maybeUTCTimes
-
-
 
 {-|
    Applies a function to a column (specified by a Sring) in a CSV value
@@ -111,18 +109,25 @@ getColumnInCSVEither csv columnName = do
              (\x -> applyToColumnInCSV id x columnName) csv
 
 
-removeAt :: Int -> [a] -> [a]
-removeAt i [] = []
-removeAt i list =
+removeAtIndex :: Int -> [a] -> [a]
+removeAtIndex i [] = []
+removeAtIndex i list =
       if (i > length list || i < 0)
             then list
             else (init alist) ++ blist
                      where (alist, blist) = splitAt (i + 1) list
 
+removeAtIndexList :: [Int] -> [a] -> [a]
+removeAtIndexList [] list = list
+removeAtIndexList _    [] = []
+removeAtIndexList (i:idx) list = removeAtIndexList idx alist
+      where
+            alist = removeAtIndex i list
+
 
 delColumnInCSV :: CSV -> String -> [[Field]]
 delColumnInCSV acsv columnName =
-      map (removeAt columnIndex') records
+      map (removeAtIndex columnIndex') records
       where
          columnIndex = findColumnIndexInCSV acsv columnName
          columnIndex' = fromInteger $ either (\_ -> -1) id columnIndex
