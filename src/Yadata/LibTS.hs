@@ -177,8 +177,9 @@ writeFileTS path (TS times values) =
 
 readFileTS :: FilePath -> IO (TS Double)
 readFileTS path = do
-    let tstext = readFile path
-    txt <- tstext
+    -- let tstext = readFile path
+    -- txt <- tstext
+    txt <- readFile path
     let ptxt = parseCSV path txt
     let date_ =  either
                 (\_-> [])
